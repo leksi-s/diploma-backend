@@ -236,25 +236,22 @@ namespace diploma.api.Controllers
 		{
 			try
 			{
-				// Перевіряємо чи email вже існує
 				if (await _context.Users.AnyAsync(u => u.Email == request.Email))
 					return BadRequest("Email already exists");
 
-				// Створюємо користувача без пароля (для неавторизованих клієнтів)
 				var user = new User
 				{
 					FirstName = request.FirstName,
 					LastName = request.LastName,
 					Email = request.Email,
 					Phone = request.Phone,
-					PasswordHash = "", // Порожній пароль для неавторизованих клієнтів
+					PasswordHash = "",
 					Role = "Client"
 				};
 
 				_context.Users.Add(user);
 				await _context.SaveChangesAsync();
 
-				// Створюємо профіль клієнта
 				var client = new Client
 				{
 					UserId = user.Id,

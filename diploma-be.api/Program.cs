@@ -9,19 +9,15 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Database - hardcoded connection string to avoid appsettings issues
 var connectionString = "Host=localhost;Database=psychapp;Username=postgres;Password=1234;Port=5432";
 builder.Services.AddDbContext<AppDbContext>(options =>
 	options.UseNpgsql(connectionString));
 
-// Add our services
 builder.Services.AddScoped<ITopsisService, TopsisService>();
 
-// JWT - hardcoded to avoid appsettings issues
 var jwtKey = "YourSuperSecretKeyForJWTWhichShouldBeLongEnough123456789";
 var jwtIssuer = "PsychApp";
 
@@ -41,24 +37,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 			RequireExpirationTime = true
 		};
 
-		// Логування для debug
 		options.Events = new JwtBearerEvents
 		{
 			OnAuthenticationFailed = context =>
 			{
-				Console.WriteLine($"🔒 Authentication failed: {context.Exception.Message}");
+				Console.WriteLine($"Authentication failed: {context.Exception.Message}");
 				return Task.CompletedTask;
 			},
 			OnTokenValidated = context =>
 			{
 				var userEmail = context.Principal?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value;
 				var userRole = context.Principal?.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
-				Console.WriteLine($"🔒 Token validated for user: {userEmail} with role: {userRole}");
+				Console.WriteLine($"Token validated for user: {userEmail} with role: {userRole}");
 				return Task.CompletedTask;
 			},
 			OnChallenge = context =>
 			{
-				Console.WriteLine($"🔒 JWT Challenge: {context.Error} - {context.ErrorDescription}");
+				Console.WriteLine($"JWT Challenge: {context.Error} - {context.ErrorDescription}");
 				return Task.CompletedTask;
 			}
 		};
@@ -66,7 +61,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// Swagger
 builder.Services.AddSwaggerGen(c =>
 {
 	c.SwaggerDoc("v1", new OpenApiInfo
@@ -101,7 +95,6 @@ builder.Services.AddSwaggerGen(c =>
 	});
 });
 
-// CORS
 builder.Services.AddCors(options =>
 {
 	options.AddPolicy("AllowAll", policy =>
@@ -112,61 +105,55 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// НОВИЙ КОД: Примусове створення та заповнення бази даних
 using (var scope = app.Services.CreateScope())
 {
 	var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 	try
 	{
-		Console.WriteLine("🔄 Setting up database...");
+		Console.WriteLine("Setting up database...");
 
-		// Видаляємо базу якщо існує
 		var deleted = await context.Database.EnsureDeletedAsync();
 		if (deleted)
 		{
-			Console.WriteLine("🗑️ Existing database deleted");
+			Console.WriteLine("Existing database deleted");
 		}
 
-		// Створюємо нову базу та всі таблиці
 		var created = await context.Database.EnsureCreatedAsync();
 		if (created)
 		{
-			Console.WriteLine("✅ Database and tables created successfully!");
+			Console.WriteLine("Database and tables created successfully!");
 		}
 		else
 		{
-			Console.WriteLine("⚠️ Database already existed");
+			Console.WriteLine("Database already existed");
 		}
 
-		// Перевіряємо чи створилися таблиці
 		var canConnect = await context.Database.CanConnectAsync();
 		if (!canConnect)
 		{
 			throw new Exception("Cannot connect to database after creation");
 		}
 
-		Console.WriteLine("✅ Database connection confirmed");
+		Console.WriteLine("Database connection confirmed");
 
-		// Перевіряємо seed data
 		var userCount = await context.Users.CountAsync();
-		Console.WriteLine($"📊 Existing users: {userCount}");
+		Console.WriteLine($"Existing users: {userCount}");
 
 		if (userCount == 0)
 		{
-			Console.WriteLine("⚠️ No users found, creating seed data...");
+			Console.WriteLine("No users found, creating seed data...");
 			await CreateSeedData(context);
 		}
 
-		// Фінальна перевірка
 		var finalUserCount = await context.Users.CountAsync();
 		var specialistCount = await context.Specialists.CountAsync();
 		var clientCount = await context.Clients.CountAsync();
 
-		Console.WriteLine($"📊 Final counts - Users: {finalUserCount}, Specialists: {specialistCount}, Clients: {clientCount}");
+		Console.WriteLine($"Final counts - Users: {finalUserCount}, Specialists: {specialistCount}, Clients: {clientCount}");
 
 		if (finalUserCount > 0)
 		{
-			Console.WriteLine("✅ Database setup completed successfully!");
+			Console.WriteLine("Database setup completed successfully!");
 		}
 		else
 		{
@@ -175,15 +162,12 @@ using (var scope = app.Services.CreateScope())
 	}
 	catch (Exception ex)
 	{
-		Console.WriteLine($"❌ Database setup error: {ex.Message}");
-		Console.WriteLine($"🔍 Stack trace: {ex.StackTrace}");
-
-		// Не зупиняємо програму, але показуємо помилку
-		Console.WriteLine("⚠️ Continuing without database...");
+		Console.WriteLine($"Database setup error: {ex.Message}");
+		Console.WriteLine($"Stack trace: {ex.StackTrace}");
+		Console.WriteLine("Continuing without database...");
 	}
 }
 
-// Configure pipeline
 if (app.Environment.IsDevelopment())
 {
 	app.UseSwagger();
@@ -200,36 +184,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-Console.WriteLine();
-Console.WriteLine("🚀 Psychology Matching API started!");
-Console.WriteLine("📖 Swagger UI: https://localhost:7044");
-Console.WriteLine();
-Console.WriteLine("🔑 Test Accounts:");
-Console.WriteLine("┌─────────────┬─────────────────────────┬─────────────┐");
-Console.WriteLine("│ Role        │ Email                   │ Password    │");
-Console.WriteLine("├─────────────┼─────────────────────────┼─────────────┤");
-Console.WriteLine("│ Admin       │ admin@psychapp.com      │ admin123    │");
-Console.WriteLine("│ Specialist  │ anna@psychapp.com       │ password123 │");
-Console.WriteLine("│ Specialist  │ petro@psychapp.com      │ password123 │");
-Console.WriteLine("│ Client      │ client@psychapp.com     │ password123 │");
-Console.WriteLine("└─────────────┴─────────────────────────┴─────────────┘");
-Console.WriteLine();
-Console.WriteLine("📋 Test Endpoints:");
-Console.WriteLine("• GET /api/test - Check API status");
-Console.WriteLine("• POST /api/auth/login - Login");
-Console.WriteLine("• GET /api/test/auth-test - Test JWT (after login)");
-Console.WriteLine("• GET /api/admin/specialists - Admin endpoint (after admin login)");
-
 await app.RunAsync();
 
-// Функція для створення початкових даних
 static async Task CreateSeedData(AppDbContext context)
 {
 	try
 	{
-		Console.WriteLine("🌱 Creating seed data...");
+		Console.WriteLine("Creating seed data...");
 
-		// Створення користувачів
 		var adminId = Guid.NewGuid();
 		var specialist1Id = Guid.NewGuid();
 		var specialist2Id = Guid.NewGuid();
@@ -287,7 +249,6 @@ static async Task CreateSeedData(AppDbContext context)
 		await context.SaveChangesAsync();
 		Console.WriteLine("✅ Users created");
 
-		// Створення спеціалістів
 		var specialists = new List<Specialist>
 		{
 			new Specialist
@@ -326,7 +287,6 @@ static async Task CreateSeedData(AppDbContext context)
 		await context.SaveChangesAsync();
 		Console.WriteLine("✅ Specialists created");
 
-		// Створення клієнта
 		var client = new Client
 		{
 			Id = Guid.NewGuid(),
@@ -342,13 +302,13 @@ static async Task CreateSeedData(AppDbContext context)
 
 		context.Clients.Add(client);
 		await context.SaveChangesAsync();
-		Console.WriteLine("✅ Client created");
+		Console.WriteLine("Client created");
 
-		Console.WriteLine("✅ Seed data creation completed!");
+		Console.WriteLine("Seed data creation completed!");
 	}
 	catch (Exception ex)
 	{
-		Console.WriteLine($"❌ Error creating seed data: {ex.Message}");
+		Console.WriteLine($"Error creating seed data: {ex.Message}");
 		throw;
 	}
 }

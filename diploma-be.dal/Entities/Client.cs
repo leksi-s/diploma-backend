@@ -14,9 +14,9 @@ namespace diploma_be.dal.Entities
 
 		public bool PreferOnline { get; set; }
 		public bool PreferOffline { get; set; }
-		public string PreferredGender { get; set; } = string.Empty; // "Male", "Female", "Any"
+		public string PreferredGender { get; set; } = string.Empty;
 		public string PreferredLanguage { get; set; } = string.Empty;
-		public string Issue { get; set; } = string.Empty; // Основна проблема
+		public string Issue { get; set; } = string.Empty;
 
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 	}

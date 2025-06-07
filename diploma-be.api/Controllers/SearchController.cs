@@ -30,7 +30,6 @@ namespace diploma_be.api.Controllers
 				.Include(s => s.User)
 				.Where(s => s.IsActive);
 
-			// Текстовий пошук по імені, освіті, досвіду, спеціалізації
 			if (!string.IsNullOrEmpty(query))
 			{
 				specialists = specialists.Where(s =>
@@ -41,7 +40,6 @@ namespace diploma_be.api.Controllers
 					s.Specialization.ToLower().Contains(query.ToLower()));
 			}
 
-			// Фільтри
 			if (maxPrice.HasValue)
 				specialists = specialists.Where(s => s.Price <= maxPrice.Value);
 
@@ -85,7 +83,6 @@ namespace diploma_be.api.Controllers
 		[HttpGet("specialists/popular")]
 		public async Task<ActionResult<List<SpecialistDto>>> GetPopularSpecialists()
 		{
-			// Спеціалісти з найбільшою кількістю завершених прийомів
 			var popularSpecialists = await _context.Specialists
 				.Include(s => s.User)
 				.Where(s => s.IsActive)

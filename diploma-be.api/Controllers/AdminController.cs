@@ -79,11 +79,9 @@ namespace diploma_be.api.Controllers
 		[HttpPost("specialists")]
 		public async Task<ActionResult<SpecialistDto>> CreateSpecialist([FromBody] CreateSpecialistRequest request)
 		{
-			// Перевіряємо чи email вже існує
 			if (await _context.Users.AnyAsync(u => u.Email == request.Email))
 				return BadRequest("Email already exists");
 
-			// Створюємо користувача
 			var user = new User
 			{
 				FirstName = request.FirstName,
@@ -97,7 +95,6 @@ namespace diploma_be.api.Controllers
 			_context.Users.Add(user);
 			await _context.SaveChangesAsync();
 
-			// Створюємо профіль спеціаліста
 			var specialist = new Specialist
 			{
 				UserId = user.Id,
@@ -166,14 +163,12 @@ namespace diploma_be.api.Controllers
 			if (specialist == null)
 				return NotFound();
 
-			// Перевіряємо чи є активні записи
 			var hasActiveAppointments = await _context.Appointments
 				.AnyAsync(a => a.SpecialistId == id && a.Status == "Scheduled");
 
 			if (hasActiveAppointments)
 				return BadRequest("Cannot delete specialist with active appointments");
 
-			// Видаляємо спеціаліста та користувача
 			_context.Specialists.Remove(specialist);
 			_context.Users.Remove(specialist.User);
 			await _context.SaveChangesAsync();

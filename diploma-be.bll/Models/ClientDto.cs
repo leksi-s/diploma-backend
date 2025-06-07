@@ -35,7 +35,6 @@
 		public string Issue { get; set; } = string.Empty;
 	}
 
-	// Додаткові моделі для покращеного TOPSIS
 	public class DetailedTopsisRequest
 	{
 		public decimal Budget { get; set; }
@@ -44,16 +43,12 @@
 		public string PreferredGender { get; set; } = string.Empty;
 		public string PreferredLanguage { get; set; } = string.Empty;
 		public string Issue { get; set; } = string.Empty;
-
-		// Вагові коефіцієнти (опціонально)
 		public double PriceWeight { get; set; } = 0.25;
 		public double SpecializationWeight { get; set; } = 0.35;
 		public double LanguageWeight { get; set; } = 0.15;
 		public double GenderWeight { get; set; } = 0.10;
 		public double FormatWeight { get; set; } = 0.15;
-
-		// Додаткові критерії
-		public int UrgencyLevel { get; set; } = 3; // 1-5 (1=не терміново, 5=дуже терміново)
+		public int UrgencyLevel { get; set; } = 3;
 		public bool HasPreviousTherapyExperience { get; set; }
 		public string AdditionalNotes { get; set; } = string.Empty;
 	}

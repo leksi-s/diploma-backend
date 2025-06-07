@@ -18,32 +18,27 @@ namespace diploma_be.dal
 		{
 			base.OnModelCreating(modelBuilder);
 
-			// Явно вказуємо імена таблиць з лапками
 			modelBuilder.Entity<User>().ToTable("Users");
 			modelBuilder.Entity<Specialist>().ToTable("Specialists");
 			modelBuilder.Entity<Client>().ToTable("Clients");
 			modelBuilder.Entity<Appointment>().ToTable("Appointments");
 
-			// User configuration
 			modelBuilder.Entity<User>()
 				.HasIndex(u => u.Email)
 				.IsUnique();
 
-			// Specialist configuration
 			modelBuilder.Entity<Specialist>()
 				.HasOne(s => s.User)
 				.WithMany()
 				.HasForeignKey(s => s.UserId)
 				.OnDelete(DeleteBehavior.Cascade);
 
-			// Client configuration
 			modelBuilder.Entity<Client>()
 				.HasOne(c => c.User)
 				.WithMany()
 				.HasForeignKey(c => c.UserId)
 				.OnDelete(DeleteBehavior.Cascade);
 
-			// Appointment configuration
 			modelBuilder.Entity<Appointment>()
 				.HasOne(a => a.Client)
 				.WithMany()

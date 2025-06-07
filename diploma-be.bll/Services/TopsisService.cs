@@ -22,7 +22,6 @@ namespace diploma_be.bll.Services
 
 		public async Task<List<SpecialistDto>> GetRankedSpecialistsAsync(Guid clientUserId)
 		{
-			// Отримуємо клієнта
 			var client = await _context.Clients
 				.Include(c => c.User)
 				.FirstOrDefaultAsync(c => c.UserId == clientUserId);
@@ -30,7 +29,6 @@ namespace diploma_be.bll.Services
 			if (client == null)
 				throw new Exception("Client not found");
 
-			// Створюємо запит на основі профілю клієнта
 			var request = new TopsisRequest
 			{
 				Budget = client.Budget,
@@ -46,7 +44,6 @@ namespace diploma_be.bll.Services
 
 		public async Task<List<SpecialistDto>> CalculateTopsisAsync(TopsisRequest request)
 		{
-			// Отримуємо всіх активних спеціалістів
 			var specialists = await _context.Specialists
 				.Include(s => s.User)
 				.Where(s => s.IsActive)
@@ -55,13 +52,10 @@ namespace diploma_be.bll.Services
 			if (!specialists.Any())
 				return new List<SpecialistDto>();
 
-			// Створюємо матриця критеріїв
 			var matrix = CreateDecisionMatrix(specialists, request);
 
-			// Розраховуємо TOPSIS
 			var scores = CalculateTopsisScores(matrix, request);
 
-			// Створюємо результат з рейтингами
 			var result = new List<SpecialistDto>();
 			for (int i = 0; i < specialists.Count; i++)
 			{
@@ -86,14 +80,13 @@ namespace diploma_be.bll.Services
 				});
 			}
 
-			// Сортуємо за рейтингом (від найкращого до найгіршого)
 			return result.OrderByDescending(s => s.TopsisScore).ToList();
 		}
 
 		private double[,] CreateDecisionMatrix(List<Specialist> specialists, TopsisRequest request)
 		{
 			int specialistCount = specialists.Count;
-			int criteriaCount = 5; // Ціна, Спеціалізація, Мова, Стать, Онлайн/Офлайн
+			int criteriaCount = 5;
 
 			var matrix = new double[specialistCount, criteriaCount];
 
@@ -101,19 +94,14 @@ namespace diploma_be.bll.Services
 			{
 				var specialist = specialists[i];
 
-				// Критерій 1: Ціна (менше = краще, тому інвертуємо)
 				matrix[i, 0] = CalculatePriceScore(specialist.Price, request.Budget);
 
-				// Критерій 2: Спеціалізація (співпадіння = краще)
 				matrix[i, 1] = CalculateSpecializationScore(specialist.Specialization, request.Issue);
 
-				// Критерій 3: Мова (співпадіння = краще)
 				matrix[i, 2] = CalculateLanguageScore(specialist.Language, request.PreferredLanguage);
 
-				// Критерій 4: Стать (співпадіння = краще)
 				matrix[i, 3] = CalculateGenderScore(specialist.Gender, request.PreferredGender);
 
-				// Критерій 5: Онлайн/Офлайн (співпадіння потреб = краще)
 				matrix[i, 4] = CalculateFormatScore(specialist, request);
 			}
 
@@ -123,28 +111,23 @@ namespace diploma_be.bll.Services
 		private double CalculatePriceScore(decimal specialistPrice, decimal clientBudget)
 		{
 			if (specialistPrice > clientBudget)
-				return 0.1; // Дуже низький бал, якщо перевищує бюджет
-
-			// Чим ближче до бюджету, тим краще, але не перевищує
+				return 0.1;
 			return 1.0 - (double)(specialistPrice / clientBudget) * 0.3;
 		}
 
 		private double CalculateSpecializationScore(string specialistSpec, string clientIssue)
 		{
 			if (string.IsNullOrEmpty(clientIssue) || string.IsNullOrEmpty(specialistSpec))
-				return 0.5; // Нейтральний бал
-
-			// Перевіряємо точне співпадіння або часткове
+				return 0.5;
 			if (specialistSpec.ToLower().Contains(clientIssue.ToLower()) ||
 				clientIssue.ToLower().Contains(specialistSpec.ToLower()))
 				return 1.0;
 
-			// Перевіряємо схожі терміни
 			var similarTerms = GetSimilarTerms(clientIssue.ToLower());
 			if (similarTerms.Any(term => specialistSpec.ToLower().Contains(term)))
 				return 0.7;
 
-			return 0.3; // Мінімальний бал за відсутності співпадінь
+			return 0.3;
 		}
 
 		private List<string> GetSimilarTerms(string issue)
@@ -170,7 +153,7 @@ namespace diploma_be.bll.Services
 		private double CalculateLanguageScore(string specialistLang, string clientLang)
 		{
 			if (string.IsNullOrEmpty(clientLang))
-				return 1.0; // Якщо клієнт не вказав мову
+				return 1.0;
 
 			return specialistLang.ToLower() == clientLang.ToLower() ? 1.0 : 0.2;
 		}
@@ -178,7 +161,7 @@ namespace diploma_be.bll.Services
 		private double CalculateGenderScore(string specialistGender, string clientPreferredGender)
 		{
 			if (string.IsNullOrEmpty(clientPreferredGender) || clientPreferredGender.ToLower() == "any")
-				return 1.0; // Немає переваг
+				return 1.0;
 
 			return specialistGender.ToLower() == clientPreferredGender.ToLower() ? 1.0 : 0.3;
 		}
@@ -193,7 +176,6 @@ namespace diploma_be.bll.Services
 			if (request.PreferOffline && specialist.Offline)
 				score += 0.5;
 
-			// Якщо спеціаліст пропонує обидва формати, це бонус
 			if (specialist.Online && specialist.Offline)
 				score += 0.2;
 
@@ -202,16 +184,14 @@ namespace diploma_be.bll.Services
 
 		private List<double> CalculateTopsisScores(double[,] matrix, TopsisRequest request)
 		{
-			int alternatives = matrix.GetLength(0); // кількість спеціалістів
-			int criteria = matrix.GetLength(1); // кількість критеріїв
+			int alternatives = matrix.GetLength(0);
+			int criteria = matrix.GetLength(1);
 
-			// Вагові коефіцієнти (можна налаштовувати)
-			double[] weights = { 0.25, 0.35, 0.15, 0.10, 0.15 }; // Ціна, Спеціалізація, Мова, Стать, Формат
 
-			// Крок 1: Нормалізація матриці
+			double[] weights = { 0.25, 0.35, 0.15, 0.10, 0.15 };
+
 			var normalizedMatrix = NormalizeMatrix(matrix);
 
-			// Крок 2: Зважена нормалізована матриця
 			var weightedMatrix = new double[alternatives, criteria];
 			for (int i = 0; i < alternatives; i++)
 			{
@@ -221,7 +201,6 @@ namespace diploma_be.bll.Services
 				}
 			}
 
-			// Крок 3: Ідеальні та негативні ідеальні рішення
 			var idealSolution = new double[criteria];
 			var negativeIdealSolution = new double[criteria];
 
@@ -233,12 +212,10 @@ namespace diploma_be.bll.Services
 					columnValues.Add(weightedMatrix[i, j]);
 				}
 
-				// Всі критерії - максимізаційні (більше = краще)
 				idealSolution[j] = columnValues.Max();
 				negativeIdealSolution[j] = columnValues.Min();
 			}
 
-			// Крок 4: Відстані до ідеальних рішень
 			var scores = new List<double>();
 
 			for (int i = 0; i < alternatives; i++)
@@ -255,7 +232,6 @@ namespace diploma_be.bll.Services
 				distanceToIdeal = Math.Sqrt(distanceToIdeal);
 				distanceToNegativeIdeal = Math.Sqrt(distanceToNegativeIdeal);
 
-				// Крок 5: Розрахунок TOPSIS коефіцієнта
 				double topsisScore = distanceToNegativeIdeal / (distanceToIdeal + distanceToNegativeIdeal);
 				scores.Add(topsisScore);
 			}
@@ -271,7 +247,6 @@ namespace diploma_be.bll.Services
 
 			for (int j = 0; j < cols; j++)
 			{
-				// Розраховуємо норму для кожного критерію
 				double sumOfSquares = 0;
 				for (int i = 0; i < rows; i++)
 				{
@@ -279,7 +254,6 @@ namespace diploma_be.bll.Services
 				}
 				double norm = Math.Sqrt(sumOfSquares);
 
-				// Нормалізуємо значення
 				for (int i = 0; i < rows; i++)
 				{
 					normalized[i, j] = norm > 0 ? matrix[i, j] / norm : 0;

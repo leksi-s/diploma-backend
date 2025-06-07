@@ -18,8 +18,8 @@ namespace diploma_be.dal.Entities
 
 		public bool Online { get; set; }
 		public bool Offline { get; set; }
-		public string Gender { get; set; } = string.Empty; // "Male", "Female"
-		public string Language { get; set; } = string.Empty; // Одна мова
+		public string Gender { get; set; } = string.Empty;
+		public string Language { get; set; } = string.Empty;
 		public bool IsActive { get; set; } = true;
 
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

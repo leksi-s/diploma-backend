@@ -36,7 +36,7 @@
 
 	public class CreateAppointmentRequestWithClient
 	{
-		public Guid ClientId { get; set; }  // ДОДАНО
+		public Guid ClientId { get; set; }
 		public Guid SpecialistId { get; set; }
 		public DateTime AppointmentDate { get; set; }
 		public bool IsOnline { get; set; }
