@@ -33,4 +33,13 @@
 		public string? Status { get; set; }
 		public bool? IsOnline { get; set; }
 	}
+
+	public class CreateAppointmentRequestWithClient
+	{
+		public Guid ClientId { get; set; }  // ДОДАНО
+		public Guid SpecialistId { get; set; }
+		public DateTime AppointmentDate { get; set; }
+		public bool IsOnline { get; set; }
+		public string Notes { get; set; } = string.Empty;
+	}
 }

@@ -18,6 +18,12 @@ namespace diploma_be.dal
 		{
 			base.OnModelCreating(modelBuilder);
 
+			// Явно вказуємо імена таблиць з лапками
+			modelBuilder.Entity<User>().ToTable("Users");
+			modelBuilder.Entity<Specialist>().ToTable("Specialists");
+			modelBuilder.Entity<Client>().ToTable("Clients");
+			modelBuilder.Entity<Appointment>().ToTable("Appointments");
+
 			// User configuration
 			modelBuilder.Entity<User>()
 				.HasIndex(u => u.Email)
@@ -49,108 +55,6 @@ namespace diploma_be.dal
 				.WithMany()
 				.HasForeignKey(a => a.SpecialistId)
 				.OnDelete(DeleteBehavior.Restrict);
-
-			// Seed data
-			SeedData(modelBuilder);
-		}
-
-		private void SeedData(ModelBuilder modelBuilder)
-		{
-			// Create test users
-			var adminId = Guid.NewGuid();
-			var specialist1Id = Guid.NewGuid();
-			var specialist2Id = Guid.NewGuid();
-			var client1Id = Guid.NewGuid();
-
-			modelBuilder.Entity<User>().HasData(
-				new User
-				{
-					Id = adminId,
-					FirstName = "Admin",
-					LastName = "User",
-					Email = "admin@psychapp.com",
-					Phone = "+380501234567",
-					PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-					Role = "Admin"
-				},
-				new User
-				{
-					Id = specialist1Id,
-					FirstName = "Anna",
-					LastName = "Kovalenko",
-					Email = "anna@psychapp.com",
-					Phone = "+380507654321",
-					PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-					Role = "Specialist"
-				},
-				new User
-				{
-					Id = specialist2Id,
-					FirstName = "Petro",
-					LastName = "Ivanov",
-					Email = "petro@psychapp.com",
-					Phone = "+380509876543",
-					PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-					Role = "Specialist"
-				},
-				new User
-				{
-					Id = client1Id,
-					FirstName = "Oleksandr",
-					LastName = "Petrenko",
-					Email = "client@psychapp.com",
-					Phone = "+380661234567",
-					PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-					Role = "Client"
-				}
-			);
-
-			// Create specialists
-			modelBuilder.Entity<Specialist>().HasData(
-				new Specialist
-				{
-					Id = Guid.NewGuid(),
-					UserId = specialist1Id,
-					Education = "PhD Psychology, KNU",
-					Experience = "8 years",
-					Specialization = "Anxiety",
-					Price = 800,
-					Online = true,
-					Offline = true,
-					Gender = "Female",
-					Language = "Ukrainian",
-					IsActive = true
-				},
-				new Specialist
-				{
-					Id = Guid.NewGuid(),
-					UserId = specialist2Id,
-					Education = "Master Family Therapy",
-					Experience = "12 years",
-					Specialization = "Relationships",
-					Price = 1200,
-					Online = false,
-					Offline = true,
-					Gender = "Male",
-					Language = "Ukrainian",
-					IsActive = true
-				}
-			);
-
-			// Create client
-			modelBuilder.Entity<Client>().HasData(
-				new Client
-				{
-					Id = Guid.NewGuid(),
-					UserId = client1Id,
-					Budget = 1000,
-					PreferOnline = true,
-					PreferOffline = false,
-					PreferredGender = "Female",
-					PreferredLanguage = "Ukrainian",
-					Issue = "Anxiety"
-				}
-			);
 		}
 	}
 }

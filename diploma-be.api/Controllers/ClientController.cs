@@ -2,16 +2,14 @@
 using diploma_be.bll.Services;
 using diploma_be.dal;
 using diploma_be.dal.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace diploma.api.Controllers
 {
 	[ApiController]
 	[Route("api/[controller]")]
-	[Authorize(Roles = "Client")]
+	// ПРИБРАЛИ [Authorize(Roles = "Client")]
 	public class ClientController : ControllerBase
 	{
 		private readonly AppDbContext _context;
@@ -23,13 +21,14 @@ namespace diploma.api.Controllers
 			_topsisService = topsisService;
 		}
 
-		[HttpGet("profile")]
-		public async Task<ActionResult<ClientDto>> GetProfile()
+		// Тепер методи працюють без авторизації, але потребують clientId як параметр
+
+		[HttpGet("profile/{clientId}")]
+		public async Task<ActionResult<ClientDto>> GetProfile(Guid clientId)
 		{
-			var userId = GetCurrentUserId();
 			var client = await _context.Clients
 				.Include(c => c.User)
-				.FirstOrDefaultAsync(c => c.UserId == userId);
+				.FirstOrDefaultAsync(c => c.Id == clientId);
 
 			if (client == null)
 				return NotFound("Client profile not found");
@@ -50,11 +49,10 @@ namespace diploma.api.Controllers
 			});
 		}
 
-		[HttpPut("profile")]
-		public async Task<IActionResult> UpdateProfile([FromBody] UpdateClientRequest request)
+		[HttpPut("profile/{clientId}")]
+		public async Task<IActionResult> UpdateProfile(Guid clientId, [FromBody] UpdateClientRequest request)
 		{
-			var userId = GetCurrentUserId();
-			var client = await _context.Clients.FirstOrDefaultAsync(c => c.UserId == userId);
+			var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == clientId);
 
 			if (client == null)
 				return NotFound("Client profile not found");
@@ -142,11 +140,17 @@ namespace diploma.api.Controllers
 			return Ok(specialists);
 		}
 
-		[HttpGet("topsis/recommendations")]
-		public async Task<ActionResult<List<SpecialistDto>>> GetTopsisRecommendations()
+		// TOPSIS тепер приймає clientId як параметр
+		[HttpGet("topsis/recommendations/{clientId}")]
+		public async Task<ActionResult<List<SpecialistDto>>> GetTopsisRecommendations(Guid clientId)
 		{
-			var userId = GetCurrentUserId();
-			var recommendations = await _topsisService.GetRankedSpecialistsAsync(userId);
+			// Знаходимо клієнта по ID
+			var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == clientId);
+			if (client == null)
+				return NotFound("Client not found");
+
+			// Використовуємо UserId клієнта для TOPSIS
+			var recommendations = await _topsisService.GetRankedSpecialistsAsync(client.UserId);
 			return Ok(recommendations);
 		}
 
@@ -157,11 +161,13 @@ namespace diploma.api.Controllers
 			return Ok(recommendations);
 		}
 
+		// Appointments тепер потребують clientId
 		[HttpPost("appointments")]
-		public async Task<ActionResult<AppointmentDto>> CreateAppointment([FromBody] CreateAppointmentRequest request)
+		public async Task<ActionResult<AppointmentDto>> CreateAppointment([FromBody] CreateAppointmentRequestWithClient request)
 		{
-			var userId = GetCurrentUserId();
-			var client = await _context.Clients.FirstOrDefaultAsync(c => c.UserId == userId);
+			var client = await _context.Clients
+				.Include(c => c.User)
+				.FirstOrDefaultAsync(c => c.Id == request.ClientId);
 
 			if (client == null)
 				return NotFound("Client not found");
@@ -198,11 +204,10 @@ namespace diploma.api.Controllers
 			});
 		}
 
-		[HttpGet("appointments")]
-		public async Task<ActionResult<List<AppointmentDto>>> GetMyAppointments()
+		[HttpGet("appointments/{clientId}")]
+		public async Task<ActionResult<List<AppointmentDto>>> GetClientAppointments(Guid clientId)
 		{
-			var userId = GetCurrentUserId();
-			var client = await _context.Clients.FirstOrDefaultAsync(c => c.UserId == userId);
+			var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == clientId);
 
 			if (client == null)
 				return NotFound("Client not found");
@@ -223,14 +228,66 @@ namespace diploma.api.Controllers
 				})
 				.OrderBy(a => a.AppointmentDate)
 				.ToListAsync();
-
-			return Ok(appointments);
+			return appointments;
 		}
 
-		private Guid GetCurrentUserId()
+		[HttpPost("create")]
+		public async Task<ActionResult<ClientDto>> CreateClient([FromBody] CreateClientRequest request)
 		{
-			var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-			return Guid.Parse(userIdClaim!);
+			try
+			{
+				// Перевіряємо чи email вже існує
+				if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+					return BadRequest("Email already exists");
+
+				// Створюємо користувача без пароля (для неавторизованих клієнтів)
+				var user = new User
+				{
+					FirstName = request.FirstName,
+					LastName = request.LastName,
+					Email = request.Email,
+					Phone = request.Phone,
+					PasswordHash = "", // Порожній пароль для неавторизованих клієнтів
+					Role = "Client"
+				};
+
+				_context.Users.Add(user);
+				await _context.SaveChangesAsync();
+
+				// Створюємо профіль клієнта
+				var client = new Client
+				{
+					UserId = user.Id,
+					Budget = request.Budget,
+					PreferOnline = request.PreferOnline,
+					PreferOffline = request.PreferOffline,
+					PreferredGender = request.PreferredGender,
+					PreferredLanguage = request.PreferredLanguage,
+					Issue = request.Issue
+				};
+
+				_context.Clients.Add(client);
+				await _context.SaveChangesAsync();
+
+				return Ok(new ClientDto
+				{
+					Id = client.Id,
+					FirstName = user.FirstName,
+					LastName = user.LastName,
+					Email = user.Email,
+					Phone = user.Phone,
+					Budget = client.Budget,
+					PreferOnline = client.PreferOnline,
+					PreferOffline = client.PreferOffline,
+					PreferredGender = client.PreferredGender,
+					PreferredLanguage = client.PreferredLanguage,
+					Issue = client.Issue
+				});
+			}
+			catch (Exception ex)
+			{
+				return BadRequest($"Error creating client: {ex.Message}");
+			}
 		}
 	}
 }

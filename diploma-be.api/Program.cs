@@ -1,5 +1,6 @@
 ﻿using diploma_be.bll.Services;
 using diploma_be.dal;
+using diploma_be.dal.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -35,7 +36,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 			ValidateIssuerSigningKey = true,
 			ValidIssuer = jwtIssuer,
 			ValidAudience = jwtIssuer,
-			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+			ClockSkew = TimeSpan.Zero,
+			RequireExpirationTime = true
+		};
+
+		// Логування для debug
+		options.Events = new JwtBearerEvents
+		{
+			OnAuthenticationFailed = context =>
+			{
+				Console.WriteLine($"🔒 Authentication failed: {context.Exception.Message}");
+				return Task.CompletedTask;
+			},
+			OnTokenValidated = context =>
+			{
+				var userEmail = context.Principal?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value;
+				var userRole = context.Principal?.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+				Console.WriteLine($"🔒 Token validated for user: {userEmail} with role: {userRole}");
+				return Task.CompletedTask;
+			},
+			OnChallenge = context =>
+			{
+				Console.WriteLine($"🔒 JWT Challenge: {context.Error} - {context.ErrorDescription}");
+				return Task.CompletedTask;
+			}
 		};
 	});
 
@@ -87,54 +112,74 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Create database with detailed error handling
+// НОВИЙ КОД: Примусове створення та заповнення бази даних
 using (var scope = app.Services.CreateScope())
 {
 	var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 	try
 	{
-		Console.WriteLine("🔄 Attempting to connect to PostgreSQL...");
-		Console.WriteLine($"Connection: {connectionString.Replace("Password=1234", "Password=***")}");
+		Console.WriteLine("🔄 Setting up database...");
 
-		// Test connection first
-		var canConnect = await context.Database.CanConnectAsync();
-		if (canConnect)
+		// Видаляємо базу якщо існує
+		var deleted = await context.Database.EnsureDeletedAsync();
+		if (deleted)
 		{
-			Console.WriteLine("✅ Connected to PostgreSQL successfully!");
+			Console.WriteLine("🗑️ Existing database deleted");
+		}
 
-			// Create database and tables
-			await context.Database.EnsureCreatedAsync();
+		// Створюємо нову базу та всі таблиці
+		var created = await context.Database.EnsureCreatedAsync();
+		if (created)
+		{
 			Console.WriteLine("✅ Database and tables created successfully!");
-
-			// Check if we have seed data
-			var usersCount = await context.Users.CountAsync();
-			Console.WriteLine($"📊 Current users in database: {usersCount}");
-
-			if (usersCount == 0)
-			{
-				Console.WriteLine("⚠️  No users found - seed data might not have been created");
-				Console.WriteLine("💡 Check DbContext.OnModelCreating for seed data configuration");
-			}
 		}
 		else
 		{
-			Console.WriteLine("❌ Cannot connect to PostgreSQL database");
-			Console.WriteLine("🔍 Please check:");
-			Console.WriteLine("   - PostgreSQL service is running");
-			Console.WriteLine("   - Database 'psychapp' exists");
-			Console.WriteLine("   - Username/password are correct");
-			Console.WriteLine("   - Port 5432 is available");
+			Console.WriteLine("⚠️ Database already existed");
+		}
+
+		// Перевіряємо чи створилися таблиці
+		var canConnect = await context.Database.CanConnectAsync();
+		if (!canConnect)
+		{
+			throw new Exception("Cannot connect to database after creation");
+		}
+
+		Console.WriteLine("✅ Database connection confirmed");
+
+		// Перевіряємо seed data
+		var userCount = await context.Users.CountAsync();
+		Console.WriteLine($"📊 Existing users: {userCount}");
+
+		if (userCount == 0)
+		{
+			Console.WriteLine("⚠️ No users found, creating seed data...");
+			await CreateSeedData(context);
+		}
+
+		// Фінальна перевірка
+		var finalUserCount = await context.Users.CountAsync();
+		var specialistCount = await context.Specialists.CountAsync();
+		var clientCount = await context.Clients.CountAsync();
+
+		Console.WriteLine($"📊 Final counts - Users: {finalUserCount}, Specialists: {specialistCount}, Clients: {clientCount}");
+
+		if (finalUserCount > 0)
+		{
+			Console.WriteLine("✅ Database setup completed successfully!");
+		}
+		else
+		{
+			throw new Exception("Failed to create users!");
 		}
 	}
 	catch (Exception ex)
 	{
-		Console.WriteLine($"❌ Database error: {ex.Message}");
-		Console.WriteLine($"🔍 Inner exception: {ex.InnerException?.Message}");
-		Console.WriteLine("💡 Common solutions:");
-		Console.WriteLine("   1. Install PostgreSQL from https://www.postgresql.org/download/");
-		Console.WriteLine("   2. Create database: CREATE DATABASE psychapp;");
-		Console.WriteLine("   3. Check connection string credentials");
-		Console.WriteLine("   4. Ensure PostgreSQL service is started");
+		Console.WriteLine($"❌ Database setup error: {ex.Message}");
+		Console.WriteLine($"🔍 Stack trace: {ex.StackTrace}");
+
+		// Не зупиняємо програму, але показуємо помилку
+		Console.WriteLine("⚠️ Continuing without database...");
 	}
 }
 
@@ -157,51 +202,153 @@ app.MapControllers();
 
 Console.WriteLine();
 Console.WriteLine("🚀 Psychology Matching API started!");
-Console.WriteLine("📖 Swagger UI: https://localhost:7227");
+Console.WriteLine("📖 Swagger UI: https://localhost:7044");
 Console.WriteLine();
-
-// Only show test accounts if database connection was successful
-try
-{
-	using var scope = app.Services.CreateScope();
-	var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-	if (await context.Database.CanConnectAsync())
-	{
-		Console.WriteLine("🔑 Test Accounts:");
-		Console.WriteLine("┌─────────────┬─────────────────────────┬─────────────┐");
-		Console.WriteLine("│ Role        │ Email                   │ Password    │");
-		Console.WriteLine("├─────────────┼─────────────────────────┼─────────────┤");
-		Console.WriteLine("│ Admin       │ admin@psychapp.com      │ admin123    │");
-		Console.WriteLine("│ Specialist  │ anna@psychapp.com       │ password123 │");
-		Console.WriteLine("│ Specialist  │ petro@psychapp.com      │ password123 │");
-		Console.WriteLine("│ Client      │ client@psychapp.com     │ password123 │");
-		Console.WriteLine("└─────────────┴─────────────────────────┴─────────────┘");
-	}
-	else
-	{
-		Console.WriteLine("⚠️  Database connection failed - test accounts not available");
-	}
-}
-catch
-{
-	Console.WriteLine("⚠️  Database not accessible - test accounts not available");
-}
-
+Console.WriteLine("🔑 Test Accounts:");
+Console.WriteLine("┌─────────────┬─────────────────────────┬─────────────┐");
+Console.WriteLine("│ Role        │ Email                   │ Password    │");
+Console.WriteLine("├─────────────┼─────────────────────────┼─────────────┤");
+Console.WriteLine("│ Admin       │ admin@psychapp.com      │ admin123    │");
+Console.WriteLine("│ Specialist  │ anna@psychapp.com       │ password123 │");
+Console.WriteLine("│ Specialist  │ petro@psychapp.com      │ password123 │");
+Console.WriteLine("│ Client      │ client@psychapp.com     │ password123 │");
+Console.WriteLine("└─────────────┴─────────────────────────┴─────────────┘");
 Console.WriteLine();
-Console.WriteLine("🎯 Main Features:");
-Console.WriteLine("• JWT Authentication & Authorization");
-Console.WriteLine("• TOPSIS Algorithm for specialist matching");
-Console.WriteLine("• Client questionnaire and preferences");
-Console.WriteLine("• Specialist profile management");
-Console.WriteLine("• Admin panel for specialist management");
-Console.WriteLine("• Appointment booking system");
-Console.WriteLine();
-Console.WriteLine("📋 Available Endpoints:");
+Console.WriteLine("📋 Test Endpoints:");
+Console.WriteLine("• GET /api/test - Check API status");
 Console.WriteLine("• POST /api/auth/login - Login");
-Console.WriteLine("• POST /api/auth/register - Register");
-Console.WriteLine("• GET /api/client/topsis/recommendations - Get TOPSIS recommendations");
-Console.WriteLine("• POST /api/client/topsis/calculate - Calculate custom TOPSIS");
-Console.WriteLine("• GET /api/admin/specialists - Manage specialists (Admin only)");
-Console.WriteLine("• GET /api/specialist/appointments - View appointments (Specialist only)");
+Console.WriteLine("• GET /api/test/auth-test - Test JWT (after login)");
+Console.WriteLine("• GET /api/admin/specialists - Admin endpoint (after admin login)");
 
 await app.RunAsync();
+
+// Функція для створення початкових даних
+static async Task CreateSeedData(AppDbContext context)
+{
+	try
+	{
+		Console.WriteLine("🌱 Creating seed data...");
+
+		// Створення користувачів
+		var adminId = Guid.NewGuid();
+		var specialist1Id = Guid.NewGuid();
+		var specialist2Id = Guid.NewGuid();
+		var client1Id = Guid.NewGuid();
+
+		var users = new List<User>
+		{
+			new User
+			{
+				Id = adminId,
+				FirstName = "Admin",
+				LastName = "User",
+				Email = "admin@psychapp.com",
+				Phone = "+380501234567",
+				PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
+				Role = "Admin",
+				CreatedAt = DateTime.UtcNow
+			},
+			new User
+			{
+				Id = specialist1Id,
+				FirstName = "Anna",
+				LastName = "Kovalenko",
+				Email = "anna@psychapp.com",
+				Phone = "+380507654321",
+				PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
+				Role = "Specialist",
+				CreatedAt = DateTime.UtcNow
+			},
+			new User
+			{
+				Id = specialist2Id,
+				FirstName = "Petro",
+				LastName = "Ivanov",
+				Email = "petro@psychapp.com",
+				Phone = "+380509876543",
+				PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
+				Role = "Specialist",
+				CreatedAt = DateTime.UtcNow
+			},
+			new User
+			{
+				Id = client1Id,
+				FirstName = "Oleksandr",
+				LastName = "Petrenko",
+				Email = "client@psychapp.com",
+				Phone = "+380661234567",
+				PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
+				Role = "Client",
+				CreatedAt = DateTime.UtcNow
+			}
+		};
+
+		context.Users.AddRange(users);
+		await context.SaveChangesAsync();
+		Console.WriteLine("✅ Users created");
+
+		// Створення спеціалістів
+		var specialists = new List<Specialist>
+		{
+			new Specialist
+			{
+				Id = Guid.NewGuid(),
+				UserId = specialist1Id,
+				Education = "PhD Psychology, KNU",
+				Experience = "8 years",
+				Specialization = "Anxiety",
+				Price = 800,
+				Online = true,
+				Offline = true,
+				Gender = "Female",
+				Language = "Ukrainian",
+				IsActive = true,
+				CreatedAt = DateTime.UtcNow
+			},
+			new Specialist
+			{
+				Id = Guid.NewGuid(),
+				UserId = specialist2Id,
+				Education = "Master Family Therapy",
+				Experience = "12 years",
+				Specialization = "Relationships",
+				Price = 1200,
+				Online = false,
+				Offline = true,
+				Gender = "Male",
+				Language = "Ukrainian",
+				IsActive = true,
+				CreatedAt = DateTime.UtcNow
+			}
+		};
+
+		context.Specialists.AddRange(specialists);
+		await context.SaveChangesAsync();
+		Console.WriteLine("✅ Specialists created");
+
+		// Створення клієнта
+		var client = new Client
+		{
+			Id = Guid.NewGuid(),
+			UserId = client1Id,
+			Budget = 1000,
+			PreferOnline = true,
+			PreferOffline = false,
+			PreferredGender = "Female",
+			PreferredLanguage = "Ukrainian",
+			Issue = "Anxiety",
+			CreatedAt = DateTime.UtcNow
+		};
+
+		context.Clients.Add(client);
+		await context.SaveChangesAsync();
+		Console.WriteLine("✅ Client created");
+
+		Console.WriteLine("✅ Seed data creation completed!");
+	}
+	catch (Exception ex)
+	{
+		Console.WriteLine($"❌ Error creating seed data: {ex.Message}");
+		throw;
+	}
+}

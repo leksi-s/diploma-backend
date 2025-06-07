@@ -20,7 +20,7 @@ namespace diploma_be.api.Controllers
 			_context = context;
 		}
 
-		[HttpGet("specialists")]
+		[HttpGet("Specialists")]
 		public async Task<ActionResult<List<SpecialistDto>>> GetAllSpecialists()
 		{
 			var specialists = await _context.Specialists
@@ -47,7 +47,7 @@ namespace diploma_be.api.Controllers
 			return Ok(specialists);
 		}
 
-		[HttpGet("specialists/{id}")]
+		[HttpGet("Specialists/{id}")]
 		public async Task<ActionResult<SpecialistDto>> GetSpecialist(Guid id)
 		{
 			var specialist = await _context.Specialists

@@ -27,114 +27,217 @@ namespace diploma.api.Controllers
 		[HttpPost("login")]
 		public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
 		{
-			var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-
-			if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+			try
 			{
-				return Unauthorized("Invalid credentials");
+				Console.WriteLine($"🔐 Login attempt started");
+				Console.WriteLine($"🔐 Email: {request?.Email ?? "NULL"}");
+				Console.WriteLine($"🔐 Password length: {request?.Password?.Length ?? 0}");
+
+				if (request == null)
+				{
+					Console.WriteLine("❌ Request is null");
+					return BadRequest("Invalid request");
+				}
+
+				if (string.IsNullOrEmpty(request.Email))
+				{
+					Console.WriteLine("❌ Email is empty");
+					return BadRequest("Email is required");
+				}
+
+				if (string.IsNullOrEmpty(request.Password))
+				{
+					Console.WriteLine("❌ Password is empty");
+					return BadRequest("Password is required");
+				}
+
+				Console.WriteLine($"🔐 Looking for user with email: {request.Email}");
+
+				var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+				if (user == null)
+				{
+					Console.WriteLine($"❌ User not found: {request.Email}");
+					return Unauthorized("Invalid credentials");
+				}
+
+				Console.WriteLine($"🔐 User found: {user.Email}, Role: {user.Role}");
+				Console.WriteLine($"🔐 Stored hash length: {user.PasswordHash?.Length ?? 0}");
+
+				if (string.IsNullOrEmpty(user.PasswordHash))
+				{
+					Console.WriteLine("❌ User has no password hash");
+					return Unauthorized("Invalid credentials");
+				}
+
+				Console.WriteLine($"🔐 Verifying password...");
+
+				bool passwordValid;
+				try
+				{
+					passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
+					Console.WriteLine($"🔐 Password verification result: {passwordValid}");
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"❌ Password verification error: {ex.Message}");
+					return Unauthorized("Invalid credentials");
+				}
+
+				if (!passwordValid)
+				{
+					Console.WriteLine($"❌ Password verification failed for: {request.Email}");
+					return Unauthorized("Invalid credentials");
+				}
+
+				Console.WriteLine($"✅ Password verified for: {request.Email}");
+				Console.WriteLine($"🔐 Generating token...");
+
+				string token;
+				try
+				{
+					token = GenerateJwtToken(user);
+					Console.WriteLine($"✅ Token generated successfully");
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"❌ Token generation error: {ex.Message}");
+					Console.WriteLine($"❌ Token generation stack trace: {ex.StackTrace}");
+					return StatusCode(500, "Error generating authentication token");
+				}
+
+				Console.WriteLine($"✅ Login successful for: {request.Email}");
+
+				return Ok(new LoginResponse
+				{
+					Token = token,
+					Role = user.Role,
+					Name = $"{user.FirstName} {user.LastName}",
+					UserId = user.Id
+				});
 			}
-
-			var token = GenerateJwtToken(user);
-
-			return Ok(new LoginResponse
+			catch (Exception ex)
 			{
-				Token = token,
-				Role = user.Role,
-				Name = $"{user.FirstName} {user.LastName}",
-				UserId = user.Id
-			});
+				Console.WriteLine($"❌ Login error: {ex.Message}");
+				Console.WriteLine($"❌ Login stack trace: {ex.StackTrace}");
+				return StatusCode(500, $"Internal server error during login: {ex.Message}");
+			}
 		}
 
 		[HttpPost("register")]
 		public async Task<ActionResult<LoginResponse>> Register([FromBody] RegisterRequest request)
 		{
-			if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+			try
 			{
-				return BadRequest("Email already exists");
-			}
+				Console.WriteLine($"📝 Registration attempt for email: {request.Email}");
 
-			var user = new User
-			{
-				FirstName = request.FirstName,
-				LastName = request.LastName,
-				Email = request.Email,
-				Phone = request.Phone,
-				PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-				Role = request.Role
-			};
-
-			_context.Users.Add(user);
-			await _context.SaveChangesAsync();
-
-			// Create profile based on role
-			if (request.Role == "Client")
-			{
-				var client = new Client
+				// ТІЛЬКИ для Specialist та Admin - клієнти не реєструються тут
+				if (request.Role != "Specialist" && request.Role != "Admin")
 				{
-					UserId = user.Id,
-					Budget = 1000,
-					PreferOnline = true,
-					PreferOffline = true,
-					PreferredGender = "Any",
-					PreferredLanguage = "Ukrainian",
-					Issue = ""
-				};
-				_context.Clients.Add(client);
-				await _context.SaveChangesAsync();
-			}
-			else if (request.Role == "Specialist")
-			{
-				var specialist = new Specialist
+					Console.WriteLine($"❌ Invalid role for registration: {request.Role}");
+					return BadRequest("Registration only available for Specialists and Admins. Clients use direct creation via /api/client/create");
+				}
+
+				if (await _context.Users.AnyAsync(u => u.Email == request.Email))
 				{
-					UserId = user.Id,
-					Education = "",
-					Experience = "",
-					Specialization = "",
-					Price = 800,
-					Online = true,
-					Offline = true,
-					Gender = "Other",
-					Language = "Ukrainian",
-					IsActive = false // Admin must activate
+					Console.WriteLine($"❌ Email already exists: {request.Email}");
+					return BadRequest("Email already exists");
+				}
+
+				var user = new User
+				{
+					FirstName = request.FirstName,
+					LastName = request.LastName,
+					Email = request.Email,
+					Phone = request.Phone,
+					PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+					Role = request.Role,
+					CreatedAt = DateTime.UtcNow
 				};
-				_context.Specialists.Add(specialist);
+
+				_context.Users.Add(user);
 				await _context.SaveChangesAsync();
+
+				Console.WriteLine($"✅ User created: {user.Email} with role: {user.Role}");
+
+				// Створюємо профіль тільки для Specialist
+				if (request.Role == "Specialist")
+				{
+					var specialist = new Specialist
+					{
+						UserId = user.Id,
+						Education = "",
+						Experience = "",
+						Specialization = "",
+						Price = 800,
+						Online = true,
+						Offline = true,
+						Gender = "Other",
+						Language = "Ukrainian",
+						IsActive = false, // Admin must activate
+						CreatedAt = DateTime.UtcNow
+					};
+					_context.Specialists.Add(specialist);
+					await _context.SaveChangesAsync();
+					Console.WriteLine($"✅ Specialist profile created for: {user.Email} (inactive - requires admin activation)");
+				}
+
+				var token = GenerateJwtToken(user);
+
+				Console.WriteLine($"✅ Registration successful for: {request.Email}");
+
+				return Ok(new LoginResponse
+				{
+					Token = token,
+					Role = user.Role,
+					Name = $"{user.FirstName} {user.LastName}",
+					UserId = user.Id
+				});
 			}
-
-			var token = GenerateJwtToken(user);
-
-			return Ok(new LoginResponse
+			catch (Exception ex)
 			{
-				Token = token,
-				Role = user.Role,
-				Name = $"{user.FirstName} {user.LastName}",
-				UserId = user.Id
-			});
+				Console.WriteLine($"❌ Registration error: {ex.Message}");
+				return StatusCode(500, "Internal server error during registration");
+			}
 		}
 
 		private string GenerateJwtToken(User user)
 		{
-			var key = "YourSuperSecretKeyForJWTWhichShouldBeLongEnough123456789";
-			var tokenHandler = new JwtSecurityTokenHandler();
-			var keyBytes = Encoding.ASCII.GetBytes(key);
-
-			var tokenDescriptor = new SecurityTokenDescriptor
+			try
 			{
-				Subject = new ClaimsIdentity(new[]
-				{
-					new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-					new Claim(ClaimTypes.Email, user.Email),
-					new Claim(ClaimTypes.Role, user.Role),
-					new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
-				}),
-				Expires = DateTime.UtcNow.AddHours(2),
-				SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(keyBytes), SecurityAlgorithms.HmacSha256Signature),
-				Issuer = "PsychApp",
-				Audience = "PsychApp"
-			};
+				// ТОЧНО ТАКИЙ САМИЙ КЛЮЧ як в Program.cs
+				var key = "YourSuperSecretKeyForJWTWhichShouldBeLongEnough123456789";
+				var tokenHandler = new JwtSecurityTokenHandler();
+				var keyBytes = Encoding.UTF8.GetBytes(key);
 
-			var token = tokenHandler.CreateToken(tokenDescriptor);
-			return tokenHandler.WriteToken(token);
+				var tokenDescriptor = new SecurityTokenDescriptor
+				{
+					Subject = new ClaimsIdentity(new[]
+					{
+						new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+						new Claim(ClaimTypes.Email, user.Email),
+						new Claim(ClaimTypes.Role, user.Role),
+						new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
+					}),
+					Expires = DateTime.UtcNow.AddHours(2),
+					SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(keyBytes), SecurityAlgorithms.HmacSha256Signature),
+					Issuer = "PsychApp",
+					Audience = "PsychApp"
+				};
+
+				var token = tokenHandler.CreateToken(tokenDescriptor);
+				var tokenString = tokenHandler.WriteToken(token);
+
+				Console.WriteLine($"🔑 Generated token for user: {user.Email} (Role: {user.Role})");
+				Console.WriteLine($"🔑 Token preview: {tokenString.Substring(0, Math.Min(50, tokenString.Length))}...");
+
+				return tokenString;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"❌ Error generating token: {ex.Message}");
+				throw;
+			}
 		}
 
 		[HttpPost("logout")]
@@ -145,7 +248,7 @@ namespace diploma.api.Controllers
 			var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 			var userName = User.FindFirst(ClaimTypes.Name)?.Value;
 
-			Console.WriteLine($"User {userName} (ID: {userId}) logged out at {DateTime.UtcNow}");
+			Console.WriteLine($"👋 User {userName} (ID: {userId}) logged out at {DateTime.UtcNow}");
 
 			return Ok(new
 			{
@@ -158,19 +261,90 @@ namespace diploma.api.Controllers
 		[Authorize]
 		public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
 		{
-			var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-			var user = await _context.Users.FindAsync(userId);
+			try
+			{
+				var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+				var user = await _context.Users.FindAsync(userId);
 
-			if (user == null)
-				return NotFound("User not found");
+				if (user == null)
+				{
+					Console.WriteLine($"❌ User not found for ID: {userId}");
+					return NotFound("User not found");
+				}
 
-			if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
-				return BadRequest("Current password is incorrect");
+				if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+				{
+					Console.WriteLine($"❌ Current password incorrect for user: {user.Email}");
+					return BadRequest("Current password is incorrect");
+				}
 
-			user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-			await _context.SaveChangesAsync();
+				user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+				await _context.SaveChangesAsync();
 
-			return Ok(new { message = "Password changed successfully" });
+				Console.WriteLine($"✅ Password changed successfully for user: {user.Email}");
+
+				return Ok(new { message = "Password changed successfully" });
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"❌ Change password error: {ex.Message}");
+				return StatusCode(500, "Internal server error during password change");
+			}
+		}
+
+		[HttpGet("test-token")]
+		[Authorize]
+		public IActionResult TestToken()
+		{
+			try
+			{
+				var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+				var role = User.FindFirst(ClaimTypes.Role)?.Value;
+				var email = User.FindFirst(ClaimTypes.Email)?.Value;
+				var name = User.FindFirst(ClaimTypes.Name)?.Value;
+
+				Console.WriteLine($"🔍 Token test - User: {email}, Role: {role}");
+
+				return Ok(new
+				{
+					message = "Token is valid",
+					userId = userId,
+					role = role,
+					email = email,
+					name = name,
+					isAuthenticated = User.Identity?.IsAuthenticated,
+					claims = User.Claims.Select(c => new { type = c.Type, value = c.Value })
+				});
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"❌ Token test error: {ex.Message}");
+				return StatusCode(500, "Error testing token");
+			}
+		}
+
+		// Додаємо інформаційний endpoint про доступні ролі
+		[HttpGet("info")]
+		public IActionResult GetAuthInfo()
+		{
+			return Ok(new
+			{
+				message = "Authentication API Information",
+				availableRoles = new[]
+				{
+					new { role = "Admin", description = "Full system access, can manage specialists", registration = "Available" },
+					new { role = "Specialist", description = "Can manage own profile and appointments", registration = "Available (requires admin activation)" },
+					new { role = "Client", description = "Can browse specialists and book appointments", registration = "Not available - use /api/client/create instead" }
+				},
+				endpoints = new
+				{
+					login = "POST /api/auth/login - For Admins and Specialists",
+					register = "POST /api/auth/register - For Admins and Specialists only",
+					clientCreation = "POST /api/client/create - For Clients (no password required)",
+					changePassword = "POST /api/auth/change-password - Change password (requires auth)",
+					testToken = "GET /api/auth/test-token - Test JWT token validity"
+				}
+			});
 		}
 	}
 }

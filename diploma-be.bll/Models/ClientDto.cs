@@ -76,4 +76,18 @@
 		public List<string> Recommendations { get; set; } = new();
 		public Dictionary<string, double> UsedWeights { get; set; } = new();
 	}
+
+	public class CreateClientRequest
+	{
+		public string FirstName { get; set; } = string.Empty;
+		public string LastName { get; set; } = string.Empty;
+		public string Email { get; set; } = string.Empty;
+		public string Phone { get; set; } = string.Empty;
+		public decimal Budget { get; set; }
+		public bool PreferOnline { get; set; }
+		public bool PreferOffline { get; set; }
+		public string PreferredGender { get; set; } = string.Empty;
+		public string PreferredLanguage { get; set; } = string.Empty;
+		public string Issue { get; set; } = string.Empty;
+	}
 }

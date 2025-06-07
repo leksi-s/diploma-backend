@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "diploma-be.dal", "diploma-b
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "diploma-be.bll", "diploma-be.bll\diploma-be.bll.csproj", "{047C08C5-4E16-45FB-91DA-EFE79705DECE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "diploma-be.integration.tests", "diploma-be.integration.tests\diploma-be.integration.tests.csproj", "{5238A95E-1D0A-45CC-A711-FEA85D3002B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "diploma-be.unit.tests", "diploma-be.unit.tests\diploma-be.unit.tests.csproj", "{A7A5C62F-1C82-4674-80EB-AF2E9D94EFC2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +31,14 @@ Global
 		{047C08C5-4E16-45FB-91DA-EFE79705DECE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{047C08C5-4E16-45FB-91DA-EFE79705DECE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{047C08C5-4E16-45FB-91DA-EFE79705DECE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5238A95E-1D0A-45CC-A711-FEA85D3002B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5238A95E-1D0A-45CC-A711-FEA85D3002B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5238A95E-1D0A-45CC-A711-FEA85D3002B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5238A95E-1D0A-45CC-A711-FEA85D3002B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7A5C62F-1C82-4674-80EB-AF2E9D94EFC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7A5C62F-1C82-4674-80EB-AF2E9D94EFC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7A5C62F-1C82-4674-80EB-AF2E9D94EFC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7A5C62F-1C82-4674-80EB-AF2E9D94EFC2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

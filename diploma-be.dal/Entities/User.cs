@@ -24,7 +24,7 @@ namespace diploma_be.dal.Entities
 		public string PasswordHash { get; set; } = string.Empty;
 
 		[Required]
-		public string Role { get; set; } = string.Empty; // "Client", "Specialist", "Admin"
+		public string Role { get; set; } = string.Empty;
 
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 	}
