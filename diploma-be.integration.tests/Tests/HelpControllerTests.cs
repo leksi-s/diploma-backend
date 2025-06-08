@@ -2,7 +2,7 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 
-namespace diploma_be.Tests.Controllers
+namespace diploma_be.integration.tests.Tests
 {
 	public class HelpControllerTests
 	{

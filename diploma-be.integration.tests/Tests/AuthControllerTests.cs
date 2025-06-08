@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Moq;
 
-namespace diploma_be.Tests.Controllers
+namespace diploma_be.integration.tests.Tests
 {
 	public class AuthControllerTests : IDisposable
 	{

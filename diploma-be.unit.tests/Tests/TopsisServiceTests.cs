@@ -5,7 +5,7 @@ using diploma_be.dal.Entities;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 
-namespace diploma_be.unit.tests.Services
+namespace diploma_be.unit.tests.Tests
 {
 	public class TopsisServiceTests : IDisposable
 	{

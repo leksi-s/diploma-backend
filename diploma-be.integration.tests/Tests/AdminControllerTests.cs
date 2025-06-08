@@ -6,7 +6,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace diploma_be.Tests.Controllers
+namespace diploma_be.integration.tests.Tests
 {
 	public class AdminControllerTests : IDisposable
 	{

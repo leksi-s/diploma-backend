@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
-namespace diploma_be.Tests.Controllers
+namespace diploma_be.integration.tests.Tests
 {
 	public class SpecialistControllerTests : IDisposable
 	{

@@ -4,7 +4,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
-namespace diploma_be.unit.tests.Services
+namespace diploma_be.unit.tests.Tests
 {
 	public class AuthServiceTests : IDisposable
 	{
