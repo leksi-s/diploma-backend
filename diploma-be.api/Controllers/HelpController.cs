@@ -11,23 +11,31 @@ namespace diploma_be.api.Controllers
 		{
 			var specializations = new List<string>
 			{
-				"Anxiety",
-				"Depression",
-				"Relationships",
-				"Family Therapy",
-				"Trauma",
-				"PTSD",
-				"Addiction",
-				"Eating Disorders",
-				"Bipolar Disorder",
-				"OCD",
-				"ADHD",
-				"Grief Counseling",
-				"Stress Management",
-				"Career Counseling",
-				"Couples Therapy",
-				"Child Psychology",
-				"Adolescent Psychology"
+				"Тривожність",
+				"Депресія",
+				"Стосунки",
+				"Сімейна терапія",
+				"Травма",
+				"ПТСР",
+				"Залежності",
+				"Розлади харчової поведінки",
+				"Біполярний розлад",
+				"ОКР (обсесивно-компульсивний розлад)",
+				"СДУГ (синдром дефіциту уваги)",
+				"Горе та втрата",
+				"Управління стресом",
+				"Кар'єрне консультування",
+				"Терапія для пар",
+				"Дитяча психологія",
+				"Підліткова психологія",
+				"Панічні атаки",
+				"Фобії",
+				"Розлади сну",
+				"Емоційне вигорання",
+				"Самооцінка",
+				"Конфлікти на роботі",
+				"Життєві кризи",
+				"Психосоматика"
 			};
 
 			return Ok(specializations);
@@ -38,13 +46,13 @@ namespace diploma_be.api.Controllers
 		{
 			var languages = new List<string>
 			{
-				"Ukrainian",
-				"English",
-				"Russian",
-				"Polish",
-				"German",
-				"French",
-				"Spanish"
+				"Українська",
+				"Англійська",
+				"Російська",
+				"Польська",
+				"Німецька",
+				"Французька",
+				"Іспанська"
 			};
 
 			return Ok(languages);
@@ -55,9 +63,9 @@ namespace diploma_be.api.Controllers
 		{
 			var genders = new List<string>
 			{
-				"Male",
-				"Female",
-				"Any"
+				"Чоловік",
+				"Жінка",
+				"Будь-яка"
 			};
 
 			return Ok(genders);
@@ -68,10 +76,10 @@ namespace diploma_be.api.Controllers
 		{
 			var statuses = new List<string>
 			{
-				"Scheduled",
-				"Completed",
-				"Cancelled",
-				"NoShow"
+				"Заплановано",
+				"Завершено",
+				"Скасовано",
+				"Не з'явився"
 			};
 
 			return Ok(statuses);
@@ -82,12 +90,12 @@ namespace diploma_be.api.Controllers
 		{
 			return Ok(new
 			{
-				Name = "TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)",
-				Description = "Метод багатокритеріального прийняття рішень для підбору оптимального спеціаліста",
+				Name = "TOPSIS (Техніка впорядкування переваг за подібністю до ідеального рішення)",
+				Description = "Інтелектуальний алгоритм для підбору найкращого психолога на основі ваших індивідуальних потреб",
 				Criteria = new[]
 				{
 					new { Name = "Ціна", Weight = "25%", Description = "Відповідність ціни вашому бюджету" },
-					new { Name = "Спеціалізація", Weight = "35%", Description = "Відповідність спеціалізації вашим проблемам" },
+					new { Name = "Спеціалізації", Weight = "35%", Description = "Відповідність спеціалізацій психолога вашим проблемам" },
 					new { Name = "Мова", Weight = "15%", Description = "Спільна мова спілкування" },
 					new { Name = "Стать", Weight = "10%", Description = "Відповідність вашим уподобанням" },
 					new { Name = "Формат", Weight = "15%", Description = "Онлайн/офлайн консультації" }
@@ -101,9 +109,9 @@ namespace diploma_be.api.Controllers
 				},
 				Tips = new[]
 				{
-					"Бал 80%+ означає відмінну відповідність",
-					"Бал 60-80% означає хорошу відповідність",
-					"Бал <60% означає часткову відповідність"
+					"Оцінка 80%+ означає відмінну відповідність",
+					"Оцінка 60-80% означає хорошу відповідність",
+					"Оцінка <60% означає часткову відповідність"
 				}
 			});
 		}
@@ -113,20 +121,21 @@ namespace diploma_be.api.Controllers
 		{
 			return Ok(new
 			{
-				AppName = "Psychology Matching System",
+				AppName = "Система підбору психологів",
 				Version = "1.0.0",
-				Description = "Система підбору психологів за індивідуальними потребами з використанням алгоритму TOPSIS",
+				Description = "Платформа для пошуку психологів за індивідуальними потребами з використанням алгоритму TOPSIS",
 				Features = new[]
 				{
 					"Реєстрація та автентифікація користувачів",
-					"Профілі клієнтів та спеціалістів",
+					"Детальні профілі клієнтів та спеціалістів",
 					"Інтелектуальний підбір за алгоритмом TOPSIS",
 					"Система записів на консультації",
 					"Адміністративна панель",
-					"Фільтрація та пошук спеціалістів"
+					"Фільтрація та пошук спеціалістів",
+					"Підтримка множинного вибору проблем"
 				},
-				Developer = "Diploma Project 2024",
-				Contact = "support@psychapp.com"
+				Developer = "Дипломний проект 2024",
+				Contact = "support@psychapp.ua"
 			});
 		}
 	}

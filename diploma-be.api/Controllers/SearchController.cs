@@ -37,14 +37,14 @@ namespace diploma_be.api.Controllers
 					s.User.LastName.ToLower().Contains(query.ToLower()) ||
 					s.Education.ToLower().Contains(query.ToLower()) ||
 					s.Experience.ToLower().Contains(query.ToLower()) ||
-					s.Specialization.ToLower().Contains(query.ToLower()));
+					s.Specializations.ToLower().Contains(query.ToLower()));
 			}
 
 			if (maxPrice.HasValue)
 				specialists = specialists.Where(s => s.Price <= maxPrice.Value);
 
 			if (!string.IsNullOrEmpty(specialization))
-				specialists = specialists.Where(s => s.Specialization.ToLower().Contains(specialization.ToLower()));
+				specialists = specialists.Where(s => s.Specializations.ToLower().Contains(specialization.ToLower()));
 
 			if (!string.IsNullOrEmpty(language))
 				specialists = specialists.Where(s => s.Language.ToLower().Contains(language.ToLower()));
@@ -66,7 +66,7 @@ namespace diploma_be.api.Controllers
 					LastName = s.User.LastName,
 					Education = s.Education,
 					Experience = s.Experience,
-					Specialization = s.Specialization,
+					Specializations = s.GetSpecializationsList(),
 					Price = s.Price,
 					Online = s.Online,
 					Offline = s.Offline,
@@ -89,7 +89,7 @@ namespace diploma_be.api.Controllers
 				.Select(s => new
 				{
 					Specialist = s,
-					CompletedAppointments = _context.Appointments.Count(a => a.SpecialistId == s.Id && a.Status == "Completed")
+					CompletedAppointments = _context.Appointments.Count(a => a.SpecialistId == s.Id && a.Status == "Завершено")
 				})
 				.OrderByDescending(x => x.CompletedAppointments)
 				.Take(10)
@@ -100,7 +100,7 @@ namespace diploma_be.api.Controllers
 					LastName = x.Specialist.User.LastName,
 					Education = x.Specialist.Education,
 					Experience = x.Specialist.Experience,
-					Specialization = x.Specialist.Specialization,
+					Specializations = x.Specialist.GetSpecializationsList(),
 					Price = x.Specialist.Price,
 					Online = x.Specialist.Online,
 					Offline = x.Specialist.Offline,
@@ -125,12 +125,7 @@ namespace diploma_be.api.Controllers
 					Min = await _context.Specialists.Where(s => s.IsActive).MinAsync(s => s.Price),
 					Max = await _context.Specialists.Where(s => s.IsActive).MaxAsync(s => s.Price)
 				},
-				SpecializationDistribution = await _context.Specialists
-					.Where(s => s.IsActive)
-					.GroupBy(s => s.Specialization)
-					.Select(g => new { Specialization = g.Key, Count = g.Count() })
-					.OrderByDescending(x => x.Count)
-					.ToListAsync(),
+				SpecializationDistribution = await GetSpecializationDistribution(),
 				GenderDistribution = await _context.Specialists
 					.Where(s => s.IsActive)
 					.GroupBy(s => s.Gender)
@@ -145,6 +140,36 @@ namespace diploma_be.api.Controllers
 			};
 
 			return Ok(stats);
+		}
+
+		private async Task<List<object>> GetSpecializationDistribution()
+		{
+			var allSpecialists = await _context.Specialists
+				.Where(s => s.IsActive)
+				.Select(s => s.Specializations)
+				.ToListAsync();
+
+			var specializationCounts = new Dictionary<string, int>();
+
+			foreach (var specialistSpecs in allSpecialists)
+			{
+				if (!string.IsNullOrEmpty(specialistSpecs))
+				{
+					var specs = specialistSpecs.Split(',').Select(s => s.Trim());
+					foreach (var spec in specs)
+					{
+						if (specializationCounts.ContainsKey(spec))
+							specializationCounts[spec]++;
+						else
+							specializationCounts[spec] = 1;
+					}
+				}
+			}
+
+			return specializationCounts
+				.Select(kvp => new { Specialization = kvp.Key, Count = kvp.Value } as object)
+				.OrderByDescending(x => ((dynamic)x).Count)
+				.ToList();
 		}
 	}
 }

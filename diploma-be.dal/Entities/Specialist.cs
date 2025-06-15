@@ -11,7 +11,7 @@ namespace diploma_be.dal.Entities
 
 		public string Education { get; set; } = string.Empty;
 		public string Experience { get; set; } = string.Empty;
-		public string Specialization { get; set; } = string.Empty; // Одна спеціалізація
+		public string Specializations { get; set; } = string.Empty;
 
 		[Column(TypeName = "decimal(18,2)")]
 		public decimal Price { get; set; }
@@ -23,5 +23,15 @@ namespace diploma_be.dal.Entities
 		public bool IsActive { get; set; } = true;
 
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+		public List<string> GetSpecializationsList()
+		{
+			return string.IsNullOrEmpty(Specializations)
+				? new List<string>()
+				: Specializations.Split(',').Select(s => s.Trim()).ToList();
+		}
+		public void SetSpecializationsList(List<string> specializations)
+		{
+			Specializations = string.Join(",", specializations);
+		}
 	}
 }

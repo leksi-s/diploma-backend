@@ -9,7 +9,6 @@ namespace diploma.api.Controllers
 {
 	[ApiController]
 	[Route("api/[controller]")]
-	// ПРИБРАЛИ [Authorize(Roles = "Client")]
 	public class ClientController : ControllerBase
 	{
 		private readonly AppDbContext _context;
@@ -21,8 +20,6 @@ namespace diploma.api.Controllers
 			_topsisService = topsisService;
 		}
 
-		// Тепер методи працюють без авторизації, але потребують clientId як параметр
-
 		[HttpGet("profile/{clientId}")]
 		public async Task<ActionResult<ClientDto>> GetProfile(Guid clientId)
 		{
@@ -31,7 +28,7 @@ namespace diploma.api.Controllers
 				.FirstOrDefaultAsync(c => c.Id == clientId);
 
 			if (client == null)
-				return NotFound("Client profile not found");
+				return NotFound("Профіль клієнта не знайдено");
 
 			return Ok(new ClientDto
 			{
@@ -45,7 +42,7 @@ namespace diploma.api.Controllers
 				PreferOffline = client.PreferOffline,
 				PreferredGender = client.PreferredGender,
 				PreferredLanguage = client.PreferredLanguage,
-				Issue = client.Issue
+				Issues = client.GetIssuesList()
 			});
 		}
 
@@ -55,14 +52,14 @@ namespace diploma.api.Controllers
 			var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == clientId);
 
 			if (client == null)
-				return NotFound("Client profile not found");
+				return NotFound("Профіль клієнта не знайдено");
 
 			client.Budget = request.Budget;
 			client.PreferOnline = request.PreferOnline;
 			client.PreferOffline = request.PreferOffline;
 			client.PreferredGender = request.PreferredGender;
 			client.PreferredLanguage = request.PreferredLanguage;
-			client.Issue = request.Issue;
+			client.SetIssuesList(request.Issues);
 
 			await _context.SaveChangesAsync();
 			return NoContent();
@@ -81,7 +78,7 @@ namespace diploma.api.Controllers
 					LastName = s.User.LastName,
 					Education = s.Education,
 					Experience = s.Experience,
-					Specialization = s.Specialization,
+					Specializations = s.GetSpecializationsList(),
 					Price = s.Price,
 					Online = s.Online,
 					Offline = s.Offline,
@@ -116,8 +113,14 @@ namespace diploma.api.Controllers
 			if (!string.IsNullOrEmpty(request.Language))
 				query = query.Where(s => s.Language.ToLower().Contains(request.Language.ToLower()));
 
-			if (!string.IsNullOrEmpty(request.Specialization))
-				query = query.Where(s => s.Specialization.ToLower().Contains(request.Specialization.ToLower()));
+			if (request.Specializations != null && request.Specializations.Any())
+			{
+				query = query.Where(s =>
+					request.Specializations.Any(reqSpec =>
+						s.Specializations.ToLower().Contains(reqSpec.ToLower())
+					)
+				);
+			}
 
 			var specialists = await query
 				.Select(s => new SpecialistDto
@@ -127,7 +130,7 @@ namespace diploma.api.Controllers
 					LastName = s.User.LastName,
 					Education = s.Education,
 					Experience = s.Experience,
-					Specialization = s.Specialization,
+					Specializations = s.GetSpecializationsList(),
 					Price = s.Price,
 					Online = s.Online,
 					Offline = s.Offline,
@@ -140,16 +143,13 @@ namespace diploma.api.Controllers
 			return Ok(specialists);
 		}
 
-		// TOPSIS тепер приймає clientId як параметр
 		[HttpGet("topsis/recommendations/{clientId}")]
 		public async Task<ActionResult<List<SpecialistDto>>> GetTopsisRecommendations(Guid clientId)
 		{
-			// Знаходимо клієнта по ID
 			var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == clientId);
 			if (client == null)
-				return NotFound("Client not found");
+				return NotFound("Клієнта не знайдено");
 
-			// Використовуємо UserId клієнта для TOPSIS
 			var recommendations = await _topsisService.GetRankedSpecialistsAsync(client.UserId);
 			return Ok(recommendations);
 		}
@@ -161,7 +161,6 @@ namespace diploma.api.Controllers
 			return Ok(recommendations);
 		}
 
-		// Appointments тепер потребують clientId
 		[HttpPost("appointments")]
 		public async Task<ActionResult<AppointmentDto>> CreateAppointment([FromBody] CreateAppointmentRequestWithClient request)
 		{
@@ -170,14 +169,14 @@ namespace diploma.api.Controllers
 				.FirstOrDefaultAsync(c => c.Id == request.ClientId);
 
 			if (client == null)
-				return NotFound("Client not found");
+				return NotFound("Клієнта не знайдено");
 
 			var specialist = await _context.Specialists
 				.Include(s => s.User)
 				.FirstOrDefaultAsync(s => s.Id == request.SpecialistId);
 
 			if (specialist == null)
-				return NotFound("Specialist not found");
+				return NotFound("Спеціаліста не знайдено");
 
 			var appointment = new Appointment
 			{
@@ -186,7 +185,7 @@ namespace diploma.api.Controllers
 				AppointmentDate = request.AppointmentDate,
 				IsOnline = request.IsOnline,
 				Notes = request.Notes,
-				Status = "Scheduled"
+				Status = "Заплановано"
 			};
 
 			_context.Appointments.Add(appointment);
@@ -210,7 +209,7 @@ namespace diploma.api.Controllers
 			var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == clientId);
 
 			if (client == null)
-				return NotFound("Client not found");
+				return NotFound("Клієнта не знайдено");
 
 			var appointments = await _context.Appointments
 				.Include(a => a.Client).ThenInclude(c => c.User)
@@ -237,7 +236,7 @@ namespace diploma.api.Controllers
 			try
 			{
 				if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-					return BadRequest("Email already exists");
+					return BadRequest("Email вже існує");
 
 				var user = new User
 				{
@@ -259,9 +258,10 @@ namespace diploma.api.Controllers
 					PreferOnline = request.PreferOnline,
 					PreferOffline = request.PreferOffline,
 					PreferredGender = request.PreferredGender,
-					PreferredLanguage = request.PreferredLanguage,
-					Issue = request.Issue
+					PreferredLanguage = request.PreferredLanguage
 				};
+
+				client.SetIssuesList(request.Issues);
 
 				_context.Clients.Add(client);
 				await _context.SaveChangesAsync();
@@ -278,12 +278,12 @@ namespace diploma.api.Controllers
 					PreferOffline = client.PreferOffline,
 					PreferredGender = client.PreferredGender,
 					PreferredLanguage = client.PreferredLanguage,
-					Issue = client.Issue
+					Issues = client.GetIssuesList()
 				});
 			}
 			catch (Exception ex)
 			{
-				return BadRequest($"Error creating client: {ex.Message}");
+				return BadRequest($"Помилка створення клієнта: {ex.Message}");
 			}
 		}
 	}

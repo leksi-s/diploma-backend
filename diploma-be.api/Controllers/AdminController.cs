@@ -34,7 +34,7 @@ namespace diploma_be.api.Controllers
 					Phone = s.User.Phone,
 					Education = s.Education,
 					Experience = s.Experience,
-					Specialization = s.Specialization,
+					Specializations = s.GetSpecializationsList(),
 					Price = s.Price,
 					Online = s.Online,
 					Offline = s.Offline,
@@ -55,7 +55,7 @@ namespace diploma_be.api.Controllers
 				.FirstOrDefaultAsync(s => s.Id == id);
 
 			if (specialist == null)
-				return NotFound();
+				return NotFound("Спеціаліста не знайдено");
 
 			return Ok(new SpecialistDto
 			{
@@ -66,7 +66,7 @@ namespace diploma_be.api.Controllers
 				Phone = specialist.User.Phone,
 				Education = specialist.Education,
 				Experience = specialist.Experience,
-				Specialization = specialist.Specialization,
+				Specializations = specialist.GetSpecializationsList(),
 				Price = specialist.Price,
 				Online = specialist.Online,
 				Offline = specialist.Offline,
@@ -80,7 +80,7 @@ namespace diploma_be.api.Controllers
 		public async Task<ActionResult<SpecialistDto>> CreateSpecialist([FromBody] CreateSpecialistRequest request)
 		{
 			if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-				return BadRequest("Email already exists");
+				return BadRequest("Email вже існує");
 
 			var user = new User
 			{
@@ -100,7 +100,6 @@ namespace diploma_be.api.Controllers
 				UserId = user.Id,
 				Education = request.Education,
 				Experience = request.Experience,
-				Specialization = request.Specialization,
 				Price = request.Price,
 				Online = request.Online,
 				Offline = request.Offline,
@@ -108,6 +107,8 @@ namespace diploma_be.api.Controllers
 				Language = request.Language,
 				IsActive = true
 			};
+
+			specialist.SetSpecializationsList(request.Specializations);
 
 			_context.Specialists.Add(specialist);
 			await _context.SaveChangesAsync();
@@ -121,7 +122,7 @@ namespace diploma_be.api.Controllers
 				Phone = user.Phone,
 				Education = specialist.Education,
 				Experience = specialist.Experience,
-				Specialization = specialist.Specialization,
+				Specializations = specialist.GetSpecializationsList(),
 				Price = specialist.Price,
 				Online = specialist.Online,
 				Offline = specialist.Offline,
@@ -139,11 +140,11 @@ namespace diploma_be.api.Controllers
 				.FirstOrDefaultAsync(s => s.Id == id);
 
 			if (specialist == null)
-				return NotFound();
+				return NotFound("Спеціаліста не знайдено");
 
 			specialist.Education = request.Education;
 			specialist.Experience = request.Experience;
-			specialist.Specialization = request.Specialization;
+			specialist.SetSpecializationsList(request.Specializations);
 			specialist.Price = request.Price;
 			specialist.Online = request.Online;
 			specialist.Offline = request.Offline;
@@ -161,13 +162,13 @@ namespace diploma_be.api.Controllers
 				.FirstOrDefaultAsync(s => s.Id == id);
 
 			if (specialist == null)
-				return NotFound();
+				return NotFound("Спеціаліста не знайдено");
 
 			var hasActiveAppointments = await _context.Appointments
-				.AnyAsync(a => a.SpecialistId == id && a.Status == "Scheduled");
+				.AnyAsync(a => a.SpecialistId == id && a.Status == "Заплановано");
 
 			if (hasActiveAppointments)
-				return BadRequest("Cannot delete specialist with active appointments");
+				return BadRequest("Неможливо видалити спеціаліста з активними записами");
 
 			_context.Specialists.Remove(specialist);
 			_context.Users.Remove(specialist.User);
@@ -182,7 +183,7 @@ namespace diploma_be.api.Controllers
 			var specialist = await _context.Specialists.FindAsync(id);
 
 			if (specialist == null)
-				return NotFound();
+				return NotFound("Спеціаліста не знайдено");
 
 			specialist.IsActive = !specialist.IsActive;
 			await _context.SaveChangesAsync();
@@ -207,7 +208,7 @@ namespace diploma_be.api.Controllers
 					PreferOffline = c.PreferOffline,
 					PreferredGender = c.PreferredGender,
 					PreferredLanguage = c.PreferredLanguage,
-					Issue = c.Issue
+					Issues = c.GetIssuesList()
 				})
 				.ToListAsync();
 
@@ -244,8 +245,8 @@ namespace diploma_be.api.Controllers
 			var activeSpecialists = await _context.Specialists.CountAsync(s => s.IsActive);
 			var totalClients = await _context.Clients.CountAsync();
 			var totalAppointments = await _context.Appointments.CountAsync();
-			var completedAppointments = await _context.Appointments.CountAsync(a => a.Status == "Completed");
-			var scheduledAppointments = await _context.Appointments.CountAsync(a => a.Status == "Scheduled");
+			var completedAppointments = await _context.Appointments.CountAsync(a => a.Status == "Завершено");
+			var scheduledAppointments = await _context.Appointments.CountAsync(a => a.Status == "Заплановано");
 
 			return Ok(new
 			{

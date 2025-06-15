@@ -202,8 +202,8 @@ static async Task CreateSeedData(AppDbContext context)
 			new User
 			{
 				Id = adminId,
-				FirstName = "Admin",
-				LastName = "User",
+				FirstName = "Адмін",
+				LastName = "Системи",
 				Email = "admin@psychapp.com",
 				Phone = "+380501234567",
 				PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
@@ -213,8 +213,8 @@ static async Task CreateSeedData(AppDbContext context)
 			new User
 			{
 				Id = specialist1Id,
-				FirstName = "Anna",
-				LastName = "Kovalenko",
+				FirstName = "Анна",
+				LastName = "Коваленко",
 				Email = "anna@psychapp.com",
 				Phone = "+380507654321",
 				PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
@@ -224,8 +224,8 @@ static async Task CreateSeedData(AppDbContext context)
 			new User
 			{
 				Id = specialist2Id,
-				FirstName = "Petro",
-				LastName = "Ivanov",
+				FirstName = "Петро",
+				LastName = "Іванов",
 				Email = "petro@psychapp.com",
 				Phone = "+380509876543",
 				PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
@@ -235,8 +235,8 @@ static async Task CreateSeedData(AppDbContext context)
 			new User
 			{
 				Id = client1Id,
-				FirstName = "Oleksandr",
-				LastName = "Petrenko",
+				FirstName = "Олександр",
+				LastName = "Петренко",
 				Email = "client@psychapp.com",
 				Phone = "+380661234567",
 				PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
@@ -247,7 +247,7 @@ static async Task CreateSeedData(AppDbContext context)
 
 		context.Users.AddRange(users);
 		await context.SaveChangesAsync();
-		Console.WriteLine("✅ Users created");
+		Console.WriteLine("Users created");
 
 		var specialists = new List<Specialist>
 		{
@@ -255,14 +255,14 @@ static async Task CreateSeedData(AppDbContext context)
 			{
 				Id = Guid.NewGuid(),
 				UserId = specialist1Id,
-				Education = "PhD Psychology, KNU",
-				Experience = "8 years",
-				Specialization = "Anxiety",
+				Education = "Доктор психологічних наук, КНУ імені Тараса Шевченка",
+				Experience = "8 років практики",
+				Specializations = "Тривожність,Панічні атаки,Депресія,Самооцінка",
 				Price = 800,
 				Online = true,
 				Offline = true,
-				Gender = "Female",
-				Language = "Ukrainian",
+				Gender = "Жінка",
+				Language = "Українська",
 				IsActive = true,
 				CreatedAt = DateTime.UtcNow
 			},
@@ -270,14 +270,14 @@ static async Task CreateSeedData(AppDbContext context)
 			{
 				Id = Guid.NewGuid(),
 				UserId = specialist2Id,
-				Education = "Master Family Therapy",
-				Experience = "12 years",
-				Specialization = "Relationships",
+				Education = "Магістр сімейної терапії, НаУКМА",
+				Experience = "12 років досвіду",
+				Specializations = "Стосунки,Сімейна терапія,Конфлікти на роботі,Життєві кризи",
 				Price = 1200,
 				Online = false,
 				Offline = true,
-				Gender = "Male",
-				Language = "Ukrainian",
+				Gender = "Чоловік",
+				Language = "Українська",
 				IsActive = true,
 				CreatedAt = DateTime.UtcNow
 			}
@@ -285,7 +285,7 @@ static async Task CreateSeedData(AppDbContext context)
 
 		context.Specialists.AddRange(specialists);
 		await context.SaveChangesAsync();
-		Console.WriteLine("✅ Specialists created");
+		Console.WriteLine("Specialists created");
 
 		var client = new Client
 		{
@@ -294,9 +294,9 @@ static async Task CreateSeedData(AppDbContext context)
 			Budget = 1000,
 			PreferOnline = true,
 			PreferOffline = false,
-			PreferredGender = "Female",
-			PreferredLanguage = "Ukrainian",
-			Issue = "Anxiety",
+			PreferredGender = "Жінка",
+			PreferredLanguage = "Українська",
+			Issues = "Тривожність,Панічні атаки,Управління стресом",
 			CreatedAt = DateTime.UtcNow
 		};
 

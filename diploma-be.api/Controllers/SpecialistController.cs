@@ -29,7 +29,7 @@ namespace diploma_be.api.Controllers
 				.FirstOrDefaultAsync(s => s.UserId == userId);
 
 			if (specialist == null)
-				return NotFound("Specialist profile not found");
+				return NotFound("Профіль спеціаліста не знайдено");
 
 			return Ok(new SpecialistDto
 			{
@@ -40,7 +40,7 @@ namespace diploma_be.api.Controllers
 				Phone = specialist.User.Phone,
 				Education = specialist.Education,
 				Experience = specialist.Experience,
-				Specialization = specialist.Specialization,
+				Specializations = specialist.GetSpecializationsList(),
 				Price = specialist.Price,
 				Online = specialist.Online,
 				Offline = specialist.Offline,
@@ -57,11 +57,11 @@ namespace diploma_be.api.Controllers
 			var specialist = await _context.Specialists.FirstOrDefaultAsync(s => s.UserId == userId);
 
 			if (specialist == null)
-				return NotFound("Specialist profile not found");
+				return NotFound("Профіль спеціаліста не знайдено");
 
 			specialist.Education = request.Education;
 			specialist.Experience = request.Experience;
-			specialist.Specialization = request.Specialization;
+			specialist.SetSpecializationsList(request.Specializations);
 			specialist.Price = request.Price;
 			specialist.Online = request.Online;
 			specialist.Offline = request.Offline;
@@ -78,7 +78,7 @@ namespace diploma_be.api.Controllers
 			var specialist = await _context.Specialists.FirstOrDefaultAsync(s => s.UserId == userId);
 
 			if (specialist == null)
-				return NotFound("Specialist not found");
+				return NotFound("Спеціаліста не знайдено");
 
 			var appointments = await _context.Appointments
 				.Include(a => a.Client).ThenInclude(c => c.User)
@@ -107,17 +107,17 @@ namespace diploma_be.api.Controllers
 			var specialist = await _context.Specialists.FirstOrDefaultAsync(s => s.UserId == userId);
 
 			if (specialist == null)
-				return NotFound("Specialist not found");
+				return NotFound("Спеціаліста не знайдено");
 
 			var appointment = await _context.Appointments
 				.FirstOrDefaultAsync(a => a.Id == appointmentId && a.SpecialistId == specialist.Id);
 
 			if (appointment == null)
-				return NotFound("Appointment not found");
+				return NotFound("Запис не знайдено");
 
-			var validStatuses = new[] { "Scheduled", "Completed", "Cancelled", "NoShow" };
+			var validStatuses = new[] { "Заплановано", "Завершено", "Скасовано", "Не з'явився" };
 			if (!validStatuses.Contains(status))
-				return BadRequest("Invalid status");
+				return BadRequest("Невірний статус");
 
 			appointment.Status = status;
 			await _context.SaveChangesAsync();

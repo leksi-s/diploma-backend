@@ -12,7 +12,7 @@
 		public bool PreferOffline { get; set; }
 		public string PreferredGender { get; set; } = string.Empty;
 		public string PreferredLanguage { get; set; } = string.Empty;
-		public string Issue { get; set; } = string.Empty;
+		public List<string> Issues { get; set; } = new();
 	}
 
 	public class UpdateClientRequest
@@ -22,7 +22,7 @@
 		public bool PreferOffline { get; set; }
 		public string PreferredGender { get; set; } = string.Empty;
 		public string PreferredLanguage { get; set; } = string.Empty;
-		public string Issue { get; set; } = string.Empty;
+		public List<string> Issues { get; set; } = new();
 	}
 
 	public class TopsisRequest
@@ -32,44 +32,7 @@
 		public bool PreferOffline { get; set; }
 		public string PreferredGender { get; set; } = string.Empty;
 		public string PreferredLanguage { get; set; } = string.Empty;
-		public string Issue { get; set; } = string.Empty;
-	}
-
-	public class DetailedTopsisRequest
-	{
-		public decimal Budget { get; set; }
-		public bool PreferOnline { get; set; }
-		public bool PreferOffline { get; set; }
-		public string PreferredGender { get; set; } = string.Empty;
-		public string PreferredLanguage { get; set; } = string.Empty;
-		public string Issue { get; set; } = string.Empty;
-		public double PriceWeight { get; set; } = 0.25;
-		public double SpecializationWeight { get; set; } = 0.35;
-		public double LanguageWeight { get; set; } = 0.15;
-		public double GenderWeight { get; set; } = 0.10;
-		public double FormatWeight { get; set; } = 0.15;
-		public int UrgencyLevel { get; set; } = 3;
-		public bool HasPreviousTherapyExperience { get; set; }
-		public string AdditionalNotes { get; set; } = string.Empty;
-	}
-
-	public class TopsisResultDto
-	{
-		public List<SpecialistDto> RankedSpecialists { get; set; } = new();
-		public TopsisAnalysisDto Analysis { get; set; } = new();
-		public DateTime CalculatedAt { get; set; } = DateTime.UtcNow;
-	}
-
-	public class TopsisAnalysisDto
-	{
-		public int TotalSpecialistsEvaluated { get; set; }
-		public decimal AveragePrice { get; set; }
-		public decimal MinPrice { get; set; }
-		public decimal MaxPrice { get; set; }
-		public List<string> AvailableSpecializations { get; set; } = new();
-		public List<string> MatchingCriteria { get; set; } = new();
-		public List<string> Recommendations { get; set; } = new();
-		public Dictionary<string, double> UsedWeights { get; set; } = new();
+		public List<string> Issues { get; set; } = new();
 	}
 
 	public class CreateClientRequest
@@ -83,6 +46,6 @@
 		public bool PreferOffline { get; set; }
 		public string PreferredGender { get; set; } = string.Empty;
 		public string PreferredLanguage { get; set; } = string.Empty;
-		public string Issue { get; set; } = string.Empty;
+		public List<string> Issues { get; set; } = new();
 	}
 }

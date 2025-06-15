@@ -9,7 +9,8 @@
 		public string Phone { get; set; } = string.Empty;
 		public string Education { get; set; } = string.Empty;
 		public string Experience { get; set; } = string.Empty;
-		public string Specialization { get; set; } = string.Empty;
+		public List<string> Specializations { get; set; } = new();
+
 		public decimal Price { get; set; }
 		public bool Online { get; set; }
 		public bool Offline { get; set; }
@@ -29,7 +30,8 @@
 		public string Password { get; set; } = string.Empty;
 		public string Education { get; set; } = string.Empty;
 		public string Experience { get; set; } = string.Empty;
-		public string Specialization { get; set; } = string.Empty;
+		public List<string> Specializations { get; set; } = new();
+
 		public decimal Price { get; set; }
 		public bool Online { get; set; }
 		public bool Offline { get; set; }
@@ -41,7 +43,8 @@
 	{
 		public string Education { get; set; } = string.Empty;
 		public string Experience { get; set; } = string.Empty;
-		public string Specialization { get; set; } = string.Empty;
+		public List<string> Specializations { get; set; } = new();
+
 		public decimal Price { get; set; }
 		public bool Online { get; set; }
 		public bool Offline { get; set; }
@@ -55,6 +58,6 @@
 		public bool? Offline { get; set; }
 		public string? Gender { get; set; }
 		public string? Language { get; set; }
-		public string? Specialization { get; set; }
+		public List<string>? Specializations { get; set; }
 	}
 }

@@ -27,7 +27,7 @@ namespace diploma_be.bll.Services
 				.FirstOrDefaultAsync(c => c.UserId == clientUserId);
 
 			if (client == null)
-				throw new Exception("Client not found");
+				throw new Exception("Клієнта не знайдено");
 
 			var request = new TopsisRequest
 			{
@@ -36,7 +36,7 @@ namespace diploma_be.bll.Services
 				PreferOffline = client.PreferOffline,
 				PreferredGender = client.PreferredGender,
 				PreferredLanguage = client.PreferredLanguage,
-				Issue = client.Issue
+				Issues = client.GetIssuesList()
 			};
 
 			return await CalculateTopsisAsync(request);
@@ -53,7 +53,6 @@ namespace diploma_be.bll.Services
 				return new List<SpecialistDto>();
 
 			var matrix = CreateDecisionMatrix(specialists, request);
-
 			var scores = CalculateTopsisScores(matrix, request);
 
 			var result = new List<SpecialistDto>();
@@ -69,7 +68,7 @@ namespace diploma_be.bll.Services
 					Phone = specialist.User.Phone,
 					Education = specialist.Education,
 					Experience = specialist.Experience,
-					Specialization = specialist.Specialization,
+					Specializations = specialist.GetSpecializationsList(),
 					Price = specialist.Price,
 					Online = specialist.Online,
 					Offline = specialist.Offline,
@@ -95,13 +94,9 @@ namespace diploma_be.bll.Services
 				var specialist = specialists[i];
 
 				matrix[i, 0] = CalculatePriceScore(specialist.Price, request.Budget);
-
-				matrix[i, 1] = CalculateSpecializationScore(specialist.Specialization, request.Issue);
-
+				matrix[i, 1] = CalculateSpecializationsScore(specialist.GetSpecializationsList(), request.Issues);
 				matrix[i, 2] = CalculateLanguageScore(specialist.Language, request.PreferredLanguage);
-
 				matrix[i, 3] = CalculateGenderScore(specialist.Gender, request.PreferredGender);
-
 				matrix[i, 4] = CalculateFormatScore(specialist, request);
 			}
 
@@ -114,31 +109,60 @@ namespace diploma_be.bll.Services
 				return 0.1;
 			return 1.0 - (double)(specialistPrice / clientBudget) * 0.3;
 		}
-
-		private double CalculateSpecializationScore(string specialistSpec, string clientIssue)
+		private double CalculateSpecializationsScore(List<string> specialistSpecs, List<string> clientIssues)
 		{
-			if (string.IsNullOrEmpty(clientIssue) || string.IsNullOrEmpty(specialistSpec))
+			if (!clientIssues.Any() || !specialistSpecs.Any())
 				return 0.5;
-			if (specialistSpec.ToLower().Contains(clientIssue.ToLower()) ||
-				clientIssue.ToLower().Contains(specialistSpec.ToLower()))
-				return 1.0;
 
-			var similarTerms = GetSimilarTerms(clientIssue.ToLower());
-			if (similarTerms.Any(term => specialistSpec.ToLower().Contains(term)))
-				return 0.7;
+			double totalScore = 0;
+			int matchCount = 0;
 
-			return 0.3;
+			foreach (var issue in clientIssues)
+			{
+				double bestMatchForIssue = 0;
+
+				foreach (var spec in specialistSpecs)
+				{
+					double matchScore = 0;
+
+					if (spec.ToLower().Contains(issue.ToLower()) ||
+						issue.ToLower().Contains(spec.ToLower()))
+					{
+						matchScore = 1.0;
+					}
+					else
+					{
+						var similarTerms = GetSimilarTerms(issue.ToLower());
+						if (similarTerms.Any(term => spec.ToLower().Contains(term)))
+						{
+							matchScore = 0.7;
+						}
+					}
+
+					bestMatchForIssue = Math.Max(bestMatchForIssue, matchScore);
+				}
+
+				totalScore += bestMatchForIssue;
+				if (bestMatchForIssue > 0.5) matchCount++;
+			}
+
+			double avgScore = totalScore / clientIssues.Count;
+			double coverageBonus = (double)matchCount / clientIssues.Count * 0.2;
+
+			return Math.Min(avgScore + coverageBonus, 1.0);
 		}
 
 		private List<string> GetSimilarTerms(string issue)
 		{
 			var similarTermsMap = new Dictionary<string, List<string>>
 			{
-				{"anxiety", new List<string> {"stress", "panic", "worry", "fear"}},
-				{"depression", new List<string> {"mood", "sadness", "bipolar"}},
-				{"relationships", new List<string> {"family", "couple", "marriage", "divorce"}},
-				{"trauma", new List<string> {"ptsd", "abuse", "grief", "loss"}},
-				{"addiction", new List<string> {"substance", "alcohol", "dependency"}}
+				{"тривожність", new List<string> {"стрес", "паніка", "хвилювання", "страх", "панічні атаки"}},
+				{"депресія", new List<string> {"настрій", "сум", "біполярний", "апатія"}},
+				{"стосунки", new List<string> {"сім'я", "пара", "шлюб", "розлучення", "конфлікти"}},
+				{"травма", new List<string> {"птср", "насильство", "горе", "втрата"}},
+				{"залежності", new List<string> {"алкоголь", "наркотики", "ігроманія"}},
+				{"самооцінка", new List<string> {"впевненість", "прийняття себе", "комплекси"}},
+				{"стрес", new List<string> {"вигорання", "перевантаження", "тиск"}}
 			};
 
 			foreach (var kvp in similarTermsMap)
@@ -160,7 +184,9 @@ namespace diploma_be.bll.Services
 
 		private double CalculateGenderScore(string specialistGender, string clientPreferredGender)
 		{
-			if (string.IsNullOrEmpty(clientPreferredGender) || clientPreferredGender.ToLower() == "any")
+			if (string.IsNullOrEmpty(clientPreferredGender) ||
+				clientPreferredGender.ToLower() == "будь-яка" ||
+				clientPreferredGender.ToLower() == "any")
 				return 1.0;
 
 			return specialistGender.ToLower() == clientPreferredGender.ToLower() ? 1.0 : 0.3;
@@ -186,7 +212,6 @@ namespace diploma_be.bll.Services
 		{
 			int alternatives = matrix.GetLength(0);
 			int criteria = matrix.GetLength(1);
-
 
 			double[] weights = { 0.25, 0.35, 0.15, 0.10, 0.15 };
 

@@ -29,84 +29,84 @@ namespace diploma.api.Controllers
 		{
 			try
 			{
-				Console.WriteLine($"Login attempt started");
+				Console.WriteLine($"Спроба входу розпочата");
 				Console.WriteLine($"Email: {request?.Email ?? "NULL"}");
-				Console.WriteLine($"Password length: {request?.Password?.Length ?? 0}");
+				Console.WriteLine($"Довжина паролю: {request?.Password?.Length ?? 0}");
 
 				if (request == null)
 				{
-					Console.WriteLine("Request is null");
-					return BadRequest("Invalid request");
+					Console.WriteLine("Запит є null");
+					return BadRequest("Невірний запит");
 				}
 
 				if (string.IsNullOrEmpty(request.Email))
 				{
-					Console.WriteLine("Email is empty");
-					return BadRequest("Email is required");
+					Console.WriteLine("Email порожній");
+					return BadRequest("Email є обов'язковим");
 				}
 
 				if (string.IsNullOrEmpty(request.Password))
 				{
-					Console.WriteLine("Password is empty");
-					return BadRequest("Password is required");
+					Console.WriteLine("Пароль порожній");
+					return BadRequest("Пароль є обов'язковим");
 				}
 
-				Console.WriteLine($"Looking for user with email: {request.Email}");
+				Console.WriteLine($"Пошук користувача з email: {request.Email}");
 
 				var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
 
 				if (user == null)
 				{
-					Console.WriteLine($"User not found: {request.Email}");
-					return Unauthorized("Invalid credentials");
+					Console.WriteLine($"Користувача не знайдено: {request.Email}");
+					return Unauthorized("Невірні облікові дані");
 				}
 
-				Console.WriteLine($"User found: {user.Email}, Role: {user.Role}");
-				Console.WriteLine($"Stored hash length: {user.PasswordHash?.Length ?? 0}");
+				Console.WriteLine($"Користувача знайдено: {user.Email}, Роль: {user.Role}");
+				Console.WriteLine($"Довжина збереженого хешу: {user.PasswordHash?.Length ?? 0}");
 
 				if (string.IsNullOrEmpty(user.PasswordHash))
 				{
-					Console.WriteLine("User has no password hash");
-					return Unauthorized("Invalid credentials");
+					Console.WriteLine("Користувач не має хешу паролю");
+					return Unauthorized("Невірні облікові дані");
 				}
 
-				Console.WriteLine($"Verifying password...");
+				Console.WriteLine($"Перевірка паролю...");
 
 				bool passwordValid;
 				try
 				{
 					passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
-					Console.WriteLine($"Password verification result: {passwordValid}");
+					Console.WriteLine($"Результат перевірки паролю: {passwordValid}");
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine($"Password verification error: {ex.Message}");
-					return Unauthorized("Invalid credentials");
+					Console.WriteLine($"Помилка перевірки паролю: {ex.Message}");
+					return Unauthorized("Невірні облікові дані");
 				}
 
 				if (!passwordValid)
 				{
-					Console.WriteLine($"Password verification failed for: {request.Email}");
-					return Unauthorized("Invalid credentials");
+					Console.WriteLine($"Перевірка паролю не вдалася для: {request.Email}");
+					return Unauthorized("Невірні облікові дані");
 				}
 
-				Console.WriteLine($"Password verified for: {request.Email}");
-				Console.WriteLine($"Generating token...");
+				Console.WriteLine($"Пароль підтверджено для: {request.Email}");
+				Console.WriteLine($"Генерація токена...");
 
 				string token;
 				try
 				{
 					token = GenerateJwtToken(user);
-					Console.WriteLine($"Token generated successfully");
+					Console.WriteLine($"Токен успішно згенеровано");
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine($"Token generation error: {ex.Message}");
-					Console.WriteLine($"Token generation stack trace: {ex.StackTrace}");
-					return StatusCode(500, "Error generating authentication token");
+					Console.WriteLine($"Помилка генерації токена: {ex.Message}");
+					Console.WriteLine($"Stack trace: {ex.StackTrace}");
+					return StatusCode(500, "Помилка генерації токена автентифікації");
 				}
 
-				Console.WriteLine($"Login successful for: {request.Email}");
+				Console.WriteLine($"Вхід успішний для: {request.Email}");
 
 				return Ok(new LoginResponse
 				{
@@ -118,9 +118,9 @@ namespace diploma.api.Controllers
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Login error: {ex.Message}");
-				Console.WriteLine($"Login stack trace: {ex.StackTrace}");
-				return StatusCode(500, $"Internal server error during login: {ex.Message}");
+				Console.WriteLine($"Помилка входу: {ex.Message}");
+				Console.WriteLine($"Stack trace: {ex.StackTrace}");
+				return StatusCode(500, $"Внутрішня помилка сервера під час входу: {ex.Message}");
 			}
 		}
 
@@ -129,19 +129,18 @@ namespace diploma.api.Controllers
 		{
 			try
 			{
-				Console.WriteLine($"Registration attempt for email: {request.Email}");
+				Console.WriteLine($"Спроба реєстрації для email: {request.Email}");
 
-				// ТІЛЬКИ для Specialist та Admin - клієнти не реєструються тут
 				if (request.Role != "Specialist" && request.Role != "Admin")
 				{
-					Console.WriteLine($"Invalid role for registration: {request.Role}");
-					return BadRequest("Registration only available for Specialists and Admins. Clients use direct creation via /api/client/create");
+					Console.WriteLine($"Невірна роль для реєстрації: {request.Role}");
+					return BadRequest("Реєстрація доступна лише для спеціалістів та адміністраторів. Клієнти використовують пряме створення через /api/client/create");
 				}
 
 				if (await _context.Users.AnyAsync(u => u.Email == request.Email))
 				{
-					Console.WriteLine($"Email already exists: {request.Email}");
-					return BadRequest("Email already exists");
+					Console.WriteLine($"Email вже існує: {request.Email}");
+					return BadRequest("Email вже існує");
 				}
 
 				var user = new User
@@ -158,7 +157,7 @@ namespace diploma.api.Controllers
 				_context.Users.Add(user);
 				await _context.SaveChangesAsync();
 
-				Console.WriteLine($"User created: {user.Email} with role: {user.Role}");
+				Console.WriteLine($"Користувача створено: {user.Email} з роллю: {user.Role}");
 
 				if (request.Role == "Specialist")
 				{
@@ -167,23 +166,23 @@ namespace diploma.api.Controllers
 						UserId = user.Id,
 						Education = "",
 						Experience = "",
-						Specialization = "",
+						Specializations = "",
 						Price = 800,
 						Online = true,
 						Offline = true,
-						Gender = "Other",
-						Language = "Ukrainian",
-						IsActive = false, // Admin must activate
+						Gender = "Інше",
+						Language = "Українська",
+						IsActive = false,
 						CreatedAt = DateTime.UtcNow
 					};
 					_context.Specialists.Add(specialist);
 					await _context.SaveChangesAsync();
-					Console.WriteLine($"Specialist profile created for: {user.Email} (inactive - requires admin activation)");
+					Console.WriteLine($"Профіль спеціаліста створено для: {user.Email} (неактивний - потребує активації адміністратором)");
 				}
 
 				var token = GenerateJwtToken(user);
 
-				Console.WriteLine($"Registration successful for: {request.Email}");
+				Console.WriteLine($"Реєстрація успішна для: {request.Email}");
 
 				return Ok(new LoginResponse
 				{
@@ -195,8 +194,8 @@ namespace diploma.api.Controllers
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Registration error: {ex.Message}");
-				return StatusCode(500, "Internal server error during registration");
+				Console.WriteLine($"Помилка реєстрації: {ex.Message}");
+				return StatusCode(500, "Внутрішня помилка сервера під час реєстрації");
 			}
 		}
 
@@ -226,14 +225,14 @@ namespace diploma.api.Controllers
 				var token = tokenHandler.CreateToken(tokenDescriptor);
 				var tokenString = tokenHandler.WriteToken(token);
 
-				Console.WriteLine($"Generated token for user: {user.Email} (Role: {user.Role})");
-				Console.WriteLine($"Token preview: {tokenString.Substring(0, Math.Min(50, tokenString.Length))}...");
+				Console.WriteLine($"Згенеровано токен для користувача: {user.Email} (Роль: {user.Role})");
+				Console.WriteLine($"Попередній перегляд токена: {tokenString.Substring(0, Math.Min(50, tokenString.Length))}...");
 
 				return tokenString;
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error generating token: {ex.Message}");
+				Console.WriteLine($"Помилка генерації токена: {ex.Message}");
 				throw;
 			}
 		}
@@ -244,11 +243,11 @@ namespace diploma.api.Controllers
 			var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 			var userName = User.FindFirst(ClaimTypes.Name)?.Value;
 
-			Console.WriteLine($"User {userName} (ID: {userId}) logged out at {DateTime.UtcNow}");
+			Console.WriteLine($"Користувач {userName} (ID: {userId}) вийшов о {DateTime.UtcNow}");
 
 			return Ok(new
 			{
-				message = "Logged out successfully",
+				message = "Вихід виконано успішно",
 				timestamp = DateTime.UtcNow
 			});
 		}
@@ -264,27 +263,27 @@ namespace diploma.api.Controllers
 
 				if (user == null)
 				{
-					Console.WriteLine($"User not found for ID: {userId}");
-					return NotFound("User not found");
+					Console.WriteLine($"Користувача не знайдено для ID: {userId}");
+					return NotFound("Користувача не знайдено");
 				}
 
 				if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
 				{
-					Console.WriteLine($"Current password incorrect for user: {user.Email}");
-					return BadRequest("Current password is incorrect");
+					Console.WriteLine($"Поточний пароль невірний для користувача: {user.Email}");
+					return BadRequest("Поточний пароль невірний");
 				}
 
 				user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
 				await _context.SaveChangesAsync();
 
-				Console.WriteLine($"Password changed successfully for user: {user.Email}");
+				Console.WriteLine($"Пароль успішно змінено для користувача: {user.Email}");
 
-				return Ok(new { message = "Password changed successfully" });
+				return Ok(new { message = "Пароль успішно змінено" });
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Change password error: {ex.Message}");
-				return StatusCode(500, "Internal server error during password change");
+				Console.WriteLine($"Помилка зміни паролю: {ex.Message}");
+				return StatusCode(500, "Внутрішня помилка сервера під час зміни паролю");
 			}
 		}
 
@@ -299,11 +298,11 @@ namespace diploma.api.Controllers
 				var email = User.FindFirst(ClaimTypes.Email)?.Value;
 				var name = User.FindFirst(ClaimTypes.Name)?.Value;
 
-				Console.WriteLine($"Token test - User: {email}, Role: {role}");
+				Console.WriteLine($"Тест токена - Користувач: {email}, Роль: {role}");
 
 				return Ok(new
 				{
-					message = "Token is valid",
+					message = "Токен дійсний",
 					userId = userId,
 					role = role,
 					email = email,
@@ -314,8 +313,8 @@ namespace diploma.api.Controllers
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Token test error: {ex.Message}");
-				return StatusCode(500, "Error testing token");
+				Console.WriteLine($"Помилка тесту токена: {ex.Message}");
+				return StatusCode(500, "Помилка тестування токена");
 			}
 		}
 
@@ -324,20 +323,20 @@ namespace diploma.api.Controllers
 		{
 			return Ok(new
 			{
-				message = "Authentication API Information",
+				message = "Інформація API автентифікації",
 				availableRoles = new[]
 				{
-					new { role = "Admin", description = "Full system access, can manage specialists", registration = "Available" },
-					new { role = "Specialist", description = "Can manage own profile and appointments", registration = "Available (requires admin activation)" },
-					new { role = "Client", description = "Can browse specialists and book appointments", registration = "Not available - use /api/client/create instead" }
+					new { role = "Admin", description = "Повний доступ до системи, може керувати спеціалістами", registration = "Доступна" },
+					new { role = "Specialist", description = "Може керувати власним профілем та записами", registration = "Доступна (потребує активації адміністратором)" },
+					new { role = "Client", description = "Може переглядати спеціалістів та записуватися на консультації", registration = "Недоступна - використовуйте /api/client/create" }
 				},
 				endpoints = new
 				{
-					login = "POST /api/auth/login - For Admins and Specialists",
-					register = "POST /api/auth/register - For Admins and Specialists only",
-					clientCreation = "POST /api/client/create - For Clients (no password required)",
-					changePassword = "POST /api/auth/change-password - Change password (requires auth)",
-					testToken = "GET /api/auth/test-token - Test JWT token validity"
+					login = "POST /api/auth/login - Для адміністраторів та спеціалістів",
+					register = "POST /api/auth/register - Тільки для адміністраторів та спеціалістів",
+					clientCreation = "POST /api/client/create - Для клієнтів (пароль не потрібен)",
+					changePassword = "POST /api/auth/change-password - Зміна паролю (потребує автентифікації)",
+					testToken = "GET /api/auth/test-token - Перевірка дійсності JWT токена"
 				}
 			});
 		}
